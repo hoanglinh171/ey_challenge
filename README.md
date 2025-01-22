@@ -9,25 +9,16 @@
 ## Task list
 
 ### 1. Problem and data understanding
-- [x] Read paper, conceptualize models, and identify UHI determinants
+- [ ] Read paper, conceptualize models, and identify UHI determinants
 - [ ] Identify data source (apart from the provided one) for features based on UHI determinants
 - [ ] Extract data from satellite image
 - [ ] Extract data from kml file
 
 ### 2. Construct baseline models
-[ ] EDA
-[ ] Select regressors
-[ ] Diagnosis analysis and next step
+- [ ] EDA
+- [ ] Select regressors
+- [ ] Diagnosis analysis and next step
 
 ### 3. First iteration
 
 ### 4. Second iteration
-- [ ] Mercury
-- [x] Venus
-- [x] Earth (Orbit/Moon)
-- [x] Mars
-- [ ] Jupiter
-- [ ] Saturn
-- [ ] Uranus
-- [ ] Neptune
-- [ ] Comet Haley
