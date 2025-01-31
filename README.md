@@ -9,10 +9,17 @@
 ## Task list
 
 ### 1. Problem and data understanding
+<<<<<<< HEAD
 - [x] Read paper, conceptualize models, and identify UHI determinants
 - [x] Identify data source (apart from the provided one) for features based on UHI determinants
 - [ ] Extract data from satellite image
 - [x] Extract data from kml file
+=======
+- [ ] Read paper, conceptualize models, and identify UHI determinants
+- [ ] Identify data source (apart from the provided one) for features based on UHI determinants
+- [ ] Extract data from satellite image
+- [ ] Extract data from kml file
+>>>>>>> fac13f5e1b49bb9c220d433edec4fce1fc7b39fd
 
 ### 2. Construct baseline models
 - [ ] EDA
