@@ -173,5 +173,5 @@ cython_debug/
 # Unzipped file
 nyclion_24d
 nycgiszoningfeatures
-feature_tests
+features_test
 Building_Footprints_20250129.csv
