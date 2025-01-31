@@ -169,7 +169,6 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
-<<<<<<< HEAD
 
 # Unzipped file
 nyclion_24d
@@ -179,5 +178,3 @@ nycgiszoningfeatures_202411shp.zip
 nyclion_24d.zip
 Building_Footprints_20250129.csv
 geo
-=======
->>>>>>> fac13f5e1b49bb9c220d433edec4fce1fc7b39fd
