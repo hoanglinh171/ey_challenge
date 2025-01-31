@@ -1,0 +1,23 @@
+satellite_config:
+  url: "https://planetarycomputer.microsoft.com/api/stac/v1"
+
+  params:
+    cloud_cover: 30
+    crs: "EPSG:4326"
+    chunks: 
+      x: 2048
+      y: 2048
+    dtype: "uint16"
+
+  satellites:
+    - collection: ["landsat-c2-l2"]
+      platform: ["landsat-8"]
+      resolution: 0.00027  # 30 meters
+      bands: ['red', 'blue', 'green', 'nir08', 'swir16', 'swir22', 'coastal', 'lwir11']  # last band is always lwir11 
+      image_choice: 2
+    
+    - collection: ["sentinel-2-l2a"]
+      platform:
+      resolution: 8.98e-05  # 10 meters
+      bands: ["B01", "B02", "B03", "B04", "B05", "B06", "B07", "B08", "B8A", "B09", "B11", "B12"]
+      image_choice: 1
