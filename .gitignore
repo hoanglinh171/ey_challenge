@@ -169,3 +169,9 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# Unzipped file
+nyclion_24d
+nycgiszoningfeatures
+feature_tests
+Building_Footprints_20250129.csv
