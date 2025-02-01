@@ -5,9 +5,10 @@ import json
 
 SAVE_DIR = "data_pipeline/data/raw/"
 os.makedirs(SAVE_DIR, exist_ok=True)
-LIMIT = 100000  
+API_LIMIT = 100000
+QUERY_LIMIT = 4000
 
-def query_arcgis(config, max_records_per_query=4000):
+def query_arcgis(config, max_records_per_query=QUERY_LIMIT):
     base_url = config['base_url']
     endpoint = config['endpoint']
     name_lst = config['name']
@@ -93,7 +94,7 @@ def fetch_nyc_data(config):
             print(f"Data file already exists")
         else:
             while True:
-                url = f"{url_endpoint}?$limit={LIMIT}&$offset={offset}"
+                url = f"{url_endpoint}?$limit={API_LIMIT}&$offset={offset}"
                 response = requests.get(url)
 
                 if response.status_code != 200:
@@ -107,7 +108,7 @@ def fetch_nyc_data(config):
 
                 all_data.extend(data)
                 print(f"Retrieved {len(all_data)} rows (Offset: {offset})")
-                offset += LIMIT
+                offset += API_LIMIT
             
             with open(f"{SAVE_DIR}{name}.json", "w", encoding="utf-8") as f:
                 json.dump(all_data, f, indent=4)
