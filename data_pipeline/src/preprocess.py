@@ -1,53 +1,110 @@
 import json
+import ijson
 import yaml
 import geopandas as gpd
 import pandas as pd
 from shapely.geometry import shape
 import os
 
-
-with open("data_pipeline/config.yaml", "r") as file:
-        config = yaml.safe_load(file)
-COORDS = config['coords']
-
+READ_DIR = "data_pipeline/data/raw/"
 SAVE_DIR = "data_pipeline/data/preprocessed/"
 os.makedirs(SAVE_DIR, exist_ok=True)
 
+with open("data_pipeline/config.yaml", "r") as file:
+    config = yaml.safe_load(file)
+COORDS = config['coords']
+
 def filter_building(readfile, savefile):
-    with open(readfile, "r") as f:
-        df = gpd.GeoDataFrame(json.load(f))
+    # Read data from json
+    features = []
+    with open(readfile, "r", encoding="utf-8") as f:
+        for feature in ijson.items(f, "item"): 
+            features.append(feature)
+    print("Load data sucessfully!")
+
+    df = gpd.GeoDataFrame(features)
 
     # Drop missing value
     df = df.dropna(subset=['the_geom', 'bin', 'cnstrct_yr', 'heightroof'], how='any')
-    
-    # Filter the areas
-    df['the_geom'] = df['the_geom'].map(lambda x: shape(x) if x is not None else x)
-    df = df.set_geometry('the_geom', crs="EPSG:4326")
-    df = df.cx[COORDS[1]:COORDS[3], COORDS[0]:COORDS[2]]
 
     # Convert data type
-    df = df.to_crs(epsg=2263)
     df['lstmoddate'] = pd.to_datetime(df['lstmoddate'])
     df['bin'] = df['bin'].astype('int')
     df['cnstrct_yr'] = df['cnstrct_yr'].astype('int')
     df['heightroof'] = df['heightroof'].astype('float')
-
-    # Calculate ground area
-    df['shape_area'] = df['the_geom'].area
+    df['feat_code'] = df['feat_code'].astype('int')
 
     # Filter condition
     built_before_2021 = df['cnstrct_yr'] <= 2021
     in_mahanttan_bronx = (df['bin'] // 10**6).isin([1, 2])
     higher_12_feet = df['heightroof'] >= 12
-    larger_400_feet = df['shape_area'] >= 400
     is_building = df['feat_code'].isin([1006, 2100])
     constructed_before_date = (df['lstmoddate'] < '2021-07-24') & (df['lststatype'].isin(['Constructed']))
+    df = df[built_before_2021 & in_mahanttan_bronx & higher_12_feet & is_building & constructed_before_date]
 
-    df = df[built_before_2021 & in_mahanttan_bronx & higher_12_feet & larger_400_feet & is_building & constructed_before_date]
-    df.to_json(SAVE_DIR + savefile, orient="records", indent=4)
+    # Filter the areas
+    df['the_geom'] = df['the_geom'].apply(lambda x: shape(x) if x is not None else x)
+    df = df.set_geometry('the_geom', crs="EPSG:4326")
+    df = df.cx[COORDS[0]:COORDS[2], COORDS[1]:COORDS[3]]
 
+    # Calculate ground area
+    df = df.to_crs(epsg=2263)
+    df['shape_area'] = df['the_geom'].area
+    larger_400_feet = df['shape_area'] >= 400
+    df = df[larger_400_feet]
+
+    # Save data
+    df = df.to_crs(epsg=4326)
+    df.to_file(SAVE_DIR + savefile, driver="GeoJSON")
+    print(f"Data is saved at {SAVE_DIR + savefile}.")
+
+
+def filter_street(readfile, savefile):
+    # Read data from geojson
+    df = gpd.read_file(readfile)
+    print("Load data successfully!")
+
+    # Filter condition
+    df['RW_TYPE'] = df['RW_TYPE'].str.strip()
+
+    is_street = ~df['FeatureTyp'].isin(['2', '5', '7', '9', 'F'])
+    not_imaginary = ~df['SegmentTyp'].isin(['G', 'F'])
+    canyon_type = ~df['RW_TYPE'].isin(['4', '12', '14'])
+    constructed = df['Status'] == "2"
+
+    df = df[is_street & not_imaginary & canyon_type & constructed]
+
+    # Filter feature
+    feature_to_keep = ['OBJECTID', 'Join_ID', 'StreetCode', 'Street', 
+                       'TrafDir', 'StreetWidth_Min', 'StreetWidth_Max', 'RW_TYPE', 'POSTED_SPEED',
+                       'Number_Travel_Lanes', 'Number_Park_Lanes', 'Number_Total_Lanes',
+                       'LBlockFaceID', 'RBlockFaceID',
+                       'FeatureTyp', 'SegmentTyp',
+                       'XFrom', 'YFrom', 'XTo', 'YTo', 'ArcCenterX', 'ArcCenterY',
+                       'NodeIDFrom', 'NodeIDTo', 'NodeLevelF', 'NodeLevelT',
+                       'TRUCK_ROUTE_TYPE', 'Shape__Length', 'geometry']
+    
+    df = df[feature_to_keep]
+
+    # Filter area
+    df = df.set_geometry('geometry', crs="EPSG:4326")
+    df = df.cx[COORDS[0]:COORDS[2], COORDS[1]:COORDS[3]]
+
+    # Save data
+    df.to_file(SAVE_DIR + savefile, driver="GeoJSON")
+    print(f"Data is saved at {SAVE_DIR + savefile}.")
 
 if __name__ == "__main__":
-     readfile = "data_pipeline/data/raw/building.json"
-     filter_building(readfile, "building.json")
+    readfiles = ['building.json', 'LION.geojson']
+    savefiles = ['building.geojson', 'street.geojson']
+
+    for i in range(len(readfiles)):
+        if os.path.exists(SAVE_DIR + savefiles[i]):
+            print("Data file already exists")
+        else: 
+            readfile = READ_DIR + readfiles[i]
+            if 'building' in readfile:
+                filter_building(readfile, savefiles[i])
+            elif 'LION' in readfile:
+                filter_street(readfile, savefiles[i])
 

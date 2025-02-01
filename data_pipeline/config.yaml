@@ -30,10 +30,6 @@ arcgis_query_config:
   base_url: "https://services5.arcgis.com/GfwWNkhOj9bNBqoJ/arcgis/rest/services/"
   endpoint: "/FeatureServer/0/query"
   name: ["LION", "LION_Node", "nyzd", "nyco", "nysp", "nylh", "nysp_sd", "nyzma"]
-  params: 
-    where: "1=1"         # Get all records
-    outFields: "*"       # Get all available fields
-    f: "geojson"          # Get data in GeoJSON format
 
 soda_api_config:
   base_url: "https://data.cityofnewyork.us/resource"
