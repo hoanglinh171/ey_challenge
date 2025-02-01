@@ -7,26 +7,76 @@ SAVE_DIR = "data_pipeline/data/raw/"
 os.makedirs(SAVE_DIR, exist_ok=True)
 LIMIT = 100000  
 
-def query_arcgis(config):
+def query_arcgis(config, max_records_per_query=4000):
     base_url = config['base_url']
     endpoint = config['endpoint']
-    params = config['params']
     name_lst = config['name']
 
     for name in name_lst:
-        if os.path.exists(f"{SAVE_DIR}{name}.json"):
+        if os.path.exists(f"{SAVE_DIR}{name}.geojson"):
             print(f"Data file already exists")
         else: 
             url = base_url + name + endpoint
+            # First, get all ObjectIDs
+            params = {
+                'where': '1=1',
+                'returnIdsOnly': 'true',
+                'f': 'json'
+            }
+            
             response = requests.get(url, params=params)
 
-            if response.status_code == 200:
-                data = response.json()
-                with open(f"{SAVE_DIR}{name}.json", "w", encoding="utf-8") as f:
-                    json.dump(data, f, indent=4)
-                print(f"Data saved as {SAVE_DIR}{name}.json")
-            else:
+            if response.status_code != 200:
                 print(f"Error {response.status_code}: {response.text}")
+                break
+
+            object_ids = response.json()['objectIds']
+            
+            if not object_ids:
+                raise ValueError("No objects found in the service")
+            
+            # Sort ObjectIDs to ensure consistent pagination
+            object_ids.sort()
+
+            # Initialize GeoJSON structure
+            geojson = {
+                "type": "FeatureCollection",
+                "features": []
+            }
+            
+            # Process in chunks based on max_records_per_query
+            for i in range(0, len(object_ids), max_records_per_query):
+                chunk = object_ids[i:i + max_records_per_query]
+                
+                # Create where clause for current chunk
+                where_clause = f"OBJECTID >= {chunk[0]} AND OBJECTID <= {chunk[-1]}"
+                
+                # Query parameters for GeoJSON format
+                params = {
+                    'where': where_clause,
+                    'outFields': '*',  # Get all fields
+                    'returnGeometry': 'true',
+                    'f': 'geojson'    # Request GeoJSON format directly
+                }
+                
+                # Make request
+                response = requests.get(url, params=params)
+                data = response.json()
+                
+                if 'features' in data:
+                    geojson['features'].extend(data['features'])
+                
+                # Print progress
+                print(f"Loaded {len(geojson['features'])} features out of {len(object_ids)} total")
+            
+            # Copy any additional properties from the last response
+            for key in data.keys():
+                if key != 'features':
+                    geojson[key] = data[key]
+
+            with open(f"{SAVE_DIR}{name}.geojson", 'w', encoding="utf-8") as f:
+                json.dump(geojson, f, indent=4)
+
 
 def fetch_nyc_data(config):
     base_url = config['base_url']
