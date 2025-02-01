@@ -21,3 +21,20 @@ satellite_config:
       resolution: 8.98e-05  # 10 meters
       bands: ["B01", "B02", "B03", "B04", "B05", "B06", "B07", "B08", "B8A", "B09", "B11", "B12"]
       image_choice: 1
+
+arcgis_query_config:
+  base_url: "https://services5.arcgis.com/GfwWNkhOj9bNBqoJ/arcgis/rest/services/"
+  endpoint: "/FeatureServer/0/query"
+  name: ["LION", "LION_Node", "nyzd", "nyco", "nysp", "nylh", "nysp_sd", "nyzma"]
+  params: 
+    where: "1=1"         # Get all records
+    outFields: "*"       # Get all available fields
+    f: "geojson"          # Get data in GeoJSON format
+
+soda_api_config:
+  base_url: "https://data.cityofnewyork.us/resource"
+  datasets:
+  - name: "building"
+    endpoint: "/5zhs-2jue.json"
+  - name: "traffic"
+    endpoint: "/7ym2-wayt.json"

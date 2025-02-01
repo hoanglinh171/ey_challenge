@@ -9,12 +9,12 @@ COORDS =  (-74.01, 40.75, -73.86, 40.88)
 TIME_WINDOW = "2021-06-01/2021-09-01"
 
 def load_image(config, source):
-    api_url = config['satellite_config']['url']
-    cloud_cover =  config['satellite_config']['params']['cloud_cover']
-    crs =  config['satellite_config']['params']['crs']
-    chunks =  config['satellite_config']['params']['chunks']
-    data_type =  config['satellite_config']['params']['dtype']
-    satellite_lst = config['satellite_config']['satellites']
+    api_url = config['url']
+    cloud_cover =  config['params']['cloud_cover']
+    crs =  config['params']['crs']
+    chunks =  config['params']['chunks']
+    data_type =  config['params']['dtype']
+    satellite_lst = config['satellites']
 
     if source == 'landsat_8':
         elem = 0
@@ -52,7 +52,7 @@ def load_image(config, source):
 
 
 def process_landsat(config, data):
-    landsat_params = config['satellite_config']['satellites'][0]
+    landsat_params = config['satellites'][0]
     bands = landsat_params['bands']
     lst_bands = bands[-1]
     bands.pop(-1)
@@ -88,6 +88,8 @@ def save_raster(data, filename):
 if __name__ == "__main__":
     with open("data_pipeline/config.yaml", "r") as file:
         config = yaml.safe_load(file)
+
+    config = config['satellite_config']
 
     data_landsat = load_image(config, "landsat_8")
     data_landsat = process_landsat(config, data_landsat)
