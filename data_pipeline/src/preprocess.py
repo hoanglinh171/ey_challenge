@@ -70,7 +70,7 @@ def filter_street(readfile, savefile):
     is_street = ~df['FeatureTyp'].isin(['2', '5', '7', '9', 'F'])
     not_imaginary = ~df['SegmentTyp'].isin(['G', 'F'])
     canyon_type = ~df['RW_TYPE'].isin(['4', '12', '14'])
-    constructed = df['Status'] == "2"
+    constructed = df['Status'] == '2'
 
     df = df[is_street & not_imaginary & canyon_type & constructed]
 
@@ -78,8 +78,7 @@ def filter_street(readfile, savefile):
     feature_to_keep = ['OBJECTID', 'Join_ID', 'StreetCode', 'Street', 
                        'TrafDir', 'StreetWidth_Min', 'StreetWidth_Max', 'RW_TYPE', 'POSTED_SPEED',
                        'Number_Travel_Lanes', 'Number_Park_Lanes', 'Number_Total_Lanes',
-                       'LBlockFaceID', 'RBlockFaceID',
-                       'FeatureTyp', 'SegmentTyp',
+                       'FeatureTyp', 'SegmentTyp', 'BikeLane', 'BIKE_TRAFDIR',
                        'XFrom', 'YFrom', 'XTo', 'YTo', 'ArcCenterX', 'ArcCenterY',
                        'NodeIDFrom', 'NodeIDTo', 'NodeLevelF', 'NodeLevelT',
                        'TRUCK_ROUTE_TYPE', 'Shape__Length', 'geometry']
