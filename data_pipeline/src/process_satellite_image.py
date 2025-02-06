@@ -2,6 +2,7 @@ import yaml
 import rasterio
 import pystac_client
 import planetary_computer 
+import rioxarray
 from odc.stac import stac_load
 
 # lon low, lat low, lon upp, lat upp
