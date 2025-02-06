@@ -15,10 +15,10 @@
 - [x] Extract data from kml file
 
 ### 2. Construct baseline models
-- [ ] Data pipeline for iterative experiments
-- [ ] EDA
-- [ ] Select regressors
-- [ ] Diagnosis analysis and next step
+- [x] Data pipeline for iterative experiments
+- [ ] EDA - Lu
+- [ ] Select regressors - Leo ()
+- [ ] Diagnosis analysis and next step - both
 
 ### 3. First iteration
 

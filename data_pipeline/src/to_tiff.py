@@ -37,7 +37,6 @@ def sum_area_values(clipped_df, geometry_col, grid_cell):
     return total_area
     
 
-
 def mean_values(clipped_df, value_col):
     total = 0
     count = 0 
@@ -223,11 +222,10 @@ def street_tiff(readfile, savefile, resolution):
 
 if __name__ == "__main__":
     resolution = 30
-    # readfile = READ_DIR + "building.geojson"
-    # savefile = SAVE_DIR + f"building_res{resolution}.tiff"
-    # building_tiff(readfile, savefile, resolution)
+    readfile = READ_DIR + "building.geojson"
+    savefile = SAVE_DIR + f"building_res{resolution}.tiff"
+    building_tiff(readfile, savefile, resolution)
 
     readfile = READ_DIR + "street.geojson"
     savefile = SAVE_DIR + f"street_res{resolution}.tiff"
     street_tiff(readfile, savefile, resolution)
-    

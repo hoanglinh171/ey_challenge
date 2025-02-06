@@ -73,6 +73,8 @@ def process_landsat(config, data):
 def save_raster(data, filename):
     height = data.dims["latitude"]
     width = data.dims["longitude"]
+        
+    # print(height, width)
 
     gt = rasterio.transform.from_bounds(COORDS[0], COORDS[1], COORDS[2], COORDS[3], width, height)
     data.rio.write_crs("epsg:4326", inplace=True)
@@ -98,4 +100,3 @@ if __name__ == "__main__":
 
     data_sentinel = load_image(config, "sentinel_2")
     save_raster(data_sentinel, "data_pipeline/data/tiff/sentinel_2.tiff")
-

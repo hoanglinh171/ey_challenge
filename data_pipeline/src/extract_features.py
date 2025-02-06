@@ -2,9 +2,11 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 from pyproj import Transformer
+import os
 
 READ_DIR = "data_pipeline/data/preprocessed/"
 SAVE_DIR = "data_pipeline/data/features_extracted/"
+os.makedirs(name=SAVE_DIR, exist_ok=True)
 
 def extract_feature_building(readfile, savefile):
     df = gpd.read_file(readfile)
@@ -92,11 +94,10 @@ def extract_feature_street(readfile, savefile):
 
 
 if __name__ == "__main__":
-    # readfile = READ_DIR + "building.geojson"
-    # savefile = "building.geojson"
-    # extract_feature_building(readfile, savefile)
+    readfile = READ_DIR + "building.geojson"
+    savefile = "building.geojson"
+    extract_feature_building(readfile, savefile)
 
-    readfile = READ_DIR + "street.geojson"
-    savefile = "street.geojson"
-    extract_feature_street(readfile, savefile)
-
+    # readfile = READ_DIR + "street.geojson"
+    # savefile = "street.geojson"
+    # extract_feature_street(readfile, savefile)
