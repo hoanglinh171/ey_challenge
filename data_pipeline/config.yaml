@@ -38,3 +38,8 @@ soda_api_config:
     endpoint: "/5zhs-2jue.json"
   - name: "traffic"
     endpoint: "/7ym2-wayt.json"
+
+aqs_AQ_api_config:
+  base_url: "https://aqs.epa.gov/data/api/sampleData/byBbox"
+  
+  params:

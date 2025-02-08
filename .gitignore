@@ -180,3 +180,6 @@ Building_Footprints_20250129.csv
 geo
 data_pipeline/data
 data
+data_pipeline/src/gge_engine.py
+models
+catboost_info
