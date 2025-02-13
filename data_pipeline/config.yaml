@@ -39,7 +39,50 @@ soda_api_config:
   - name: "traffic"
     endpoint: "/7ym2-wayt.json"
 
-aqs_AQ_api_config:
-  base_url: "https://aqs.epa.gov/data/api/sampleData/byBbox"
-  
-  params:
+# aqs_AQ_api_config:
+#   base_url: "https://aqs.epa.gov/data/api/sampleData/byBbox"
+#   params:
+
+gge_engine_config:
+  coords:  coords
+  time_window: time_window
+  project: "ee-leolincoln9804"
+  collections:
+    aq_collections:
+      co_collection: 
+        name: 'COPERNICUS/S5P/NRTI/L3_CO'
+        bands: ['CO_column_number_density']
+      hcho_collection: 
+        name: 'COPERNICUS/S5P/NRTI/L3_HCHO'
+        bands: ['tropospheric_HCHO_column_number_density', 
+                'HCHO_slant_column_number_density']
+      no2_collection: 
+        name: 'COPERNICUS/S5P/NRTI/L3_NO2'
+        bands: ['NO2_column_number_density',
+                'tropospheric_NO2_column_number_density',
+                'stratospheric_NO2_column_number_density',
+                'NO2_slant_column_number_density']
+      o3_collection: 
+        name: 'COPERNICUS/S5P/NRTI/L3_O3'
+        bands: ['O3_column_number_density',
+                'O3_slant_column_number_density']
+      so2_collection: 
+        name: 'COPERNICUS/S5P/NRTI/L3_SO2'
+        bands: ['SO2_column_number_density',
+                'SO2_slant_column_number_density']
+      aod_collection: 
+        name: "MODIS/061/MCD19A2_GRANULES"
+        bands: ["Optical_Depth_047",
+                "Optical_Depth_055",
+                "AOD_Uncertainty",
+                "FineModeFraction",
+                "Column_WV",
+                "Injection_Height",
+                "AOD_QA",
+                "AngstromExp_470-780"]
+    demography_collections:
+      population: 
+        name: "projects/sat-io/open-datasets/ORNL/LANDSCAN_GLOBAL"
+        bands: []
+    
+    
