@@ -1,13 +1,19 @@
+# Google Earth Engine
+import ee
+import geemap
+
 import yaml
 import requests
 import os
 import json
+
 
 SAVE_DIR = "data_pipeline/data/raw/"
 os.makedirs(SAVE_DIR, exist_ok=True)
 API_LIMIT = 100000
 QUERY_LIMIT = 4000
 
+# Geographic Information from ArcGIS API
 def query_arcgis(config, max_records_per_query=QUERY_LIMIT):
     base_url = config['base_url']
     endpoint = config['endpoint']
@@ -78,7 +84,7 @@ def query_arcgis(config, max_records_per_query=QUERY_LIMIT):
             with open(f"{SAVE_DIR}{name}.geojson", 'w', encoding="utf-8") as f:
                 json.dump(geojson, f, indent=4)
 
-
+# NYC building and street information from SODA API
 def fetch_nyc_data(config):
     base_url = config['base_url']
     datasets = config['datasets']
@@ -112,6 +118,41 @@ def fetch_nyc_data(config):
             
             with open(f"{SAVE_DIR}{name}.json", "w", encoding="utf-8") as f:
                 json.dump(all_data, f, indent=4)
+
+# Google Earth Engine 
+def auth_and_init(config):
+    proj = config['project']
+    ee.Authenticate()
+    ee.Initialize(project=proj)
+    
+def load_ggee_data(config, collections):
+    coords = config['coords']
+    time_window = config['time_window']
+    
+    gge_coords = ee.Geometry.Rectangle(coords=coords)
+    gge_time_window = ee.DateRange(time_window.split('/')[0], time_window.split('/')[1])
+
+    data_mean_value_dict = {}
+    data_std_value_dict = {}
+    for key, value in collections.items():
+        collection_name = value['name']
+        bands = value['bands']
+
+        dataset_mean_value = ee.ImageCollection(collection_name) \
+            .filterDate(gge_time_window) \
+            .filterBounds(gge_coords) \
+            .select(bands) \
+            .mean()
+        
+        dataset_std_value =  ee.ImageCollection(collection_name) \
+            .filterDate(gge_time_window) \
+            .filterBounds(gge_coords) \
+            .select(bands) \
+            .std()
+        
+        data_mean_value_dict[key] = dataset_mean_value
+        data_std_value_dict[key] = dataset_std_value
+    
 
 if __name__ == "__main__":
     with open("data_pipeline/config.yaml", "r") as file:

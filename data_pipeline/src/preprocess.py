@@ -106,4 +106,3 @@ if __name__ == "__main__":
                 filter_building(readfile, savefiles[i])
             elif 'LION' in readfile:
                 filter_street(readfile, savefiles[i])
-

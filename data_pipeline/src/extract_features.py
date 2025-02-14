@@ -42,12 +42,12 @@ def feet_to_degree(df, lon, lat):  # lon, lat:
 def street_direction(xfrom, yfrom, xto, yto):
     dx = xto - xfrom  # Change in longitude
     dy = yto - yfrom  # Change in latitude
-
-    angle = np.degrees(np.arctan2(dy, dx))  # Convert angle to degrees
+    
+    # Convert angle to degrees
+    angle = np.degrees(np.arctan2(dy, dx))  
     
     # Adjust to fit compass direction
     angle = np.where(angle < 0, angle+360, angle)
-
     
     # Determine direction based on angle
     condlist = [
@@ -56,6 +56,7 @@ def street_direction(xfrom, yfrom, xto, yto):
         ((112.5 <= angle) & (angle < 157.5)) | ((292.5 <= angle) & (angle < 337.5)) # NW-SE
     ]
     choicelist = ["NE-SW", "N-S", "NW-SE"]
+    # choicelist = ['NW-SE', 'N-S', 'NE-SW']
 
     return np.select(condlist, choicelist, "E-W")
 
@@ -69,7 +70,7 @@ def extract_feature_street(readfile, savefile):
     df['Number_Park_Lanes'] = convert_to_float(df['Number_Park_Lanes'])
     df['Number_Total_Lanes'] = convert_to_float(df['Number_Total_Lanes'])
     df['POSTED_SPEED'] = convert_to_float(df['POSTED_SPEED'])
-    df['BikeLane'] = convert_to_float(df['BikeLane'])
+    df['BikeLane'] = convert_to_float(df['BikeLane'])   
     df['BIKE_TRAFDIR'] = np.where(df['BIKE_TRAFDIR'].str.strip() == '', None, df['BIKE_TRAFDIR'].str.strip())
     df['TRUCK_ROUTE_TYPE'] = convert_to_float(df['TRUCK_ROUTE_TYPE'])
 
@@ -98,6 +99,6 @@ if __name__ == "__main__":
     savefile = "building.geojson"
     extract_feature_building(readfile, savefile)
 
-    # readfile = READ_DIR + "street.geojson"
-    # savefile = "street.geojson"
-    # extract_feature_street(readfile, savefile)
+    readfile = READ_DIR + "street.geojson"
+    savefile = "street.geojson"
+    extract_feature_street(readfile, savefile)
