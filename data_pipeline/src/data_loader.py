@@ -84,6 +84,7 @@ def query_arcgis(config, max_records_per_query=QUERY_LIMIT):
             with open(f"{SAVE_DIR}{name}.geojson", 'w', encoding="utf-8") as f:
                 json.dump(geojson, f, indent=4)
 
+
 # NYC building and street information from SODA API
 def fetch_nyc_data(config):
     base_url = config['base_url']
@@ -119,40 +120,111 @@ def fetch_nyc_data(config):
             with open(f"{SAVE_DIR}{name}.json", "w", encoding="utf-8") as f:
                 json.dump(all_data, f, indent=4)
 
-# Google Earth Engine 
+
+# Google Earth Engine authentication
 def auth_and_init(config):
     proj = config['project']
     ee.Authenticate()
     ee.Initialize(project=proj)
-    
-def load_ggee_data(config, collections):
-    coords = config['coords']
-    time_window = config['time_window']
-    
-    gge_coords = ee.Geometry.Rectangle(coords=coords)
-    gge_time_window = ee.DateRange(time_window.split('/')[0], time_window.split('/')[1])
 
-    data_mean_value_dict = {}
-    data_std_value_dict = {}
-    for key, value in collections.items():
-        collection_name = value['name']
-        bands = value['bands']
 
-        dataset_mean_value = ee.ImageCollection(collection_name) \
-            .filterDate(gge_time_window) \
-            .filterBounds(gge_coords) \
-            .select(bands) \
-            .mean()
-        
-        dataset_std_value =  ee.ImageCollection(collection_name) \
-            .filterDate(gge_time_window) \
-            .filterBounds(gge_coords) \
-            .select(bands) \
-            .std()
-        
-        data_mean_value_dict[key] = dataset_mean_value
-        data_std_value_dict[key] = dataset_std_value
+# Load AOD data from Google Earth Engine API
+def load_AOD_data (config):
+    coords = ee.Geometry.Rectangle(config['coords'])
+
+    june_01_10 = ee.DateRange("2021-06-01", "2021-06-11")
+    june_11_20 = ee.DateRange('2021-06-11', '2021-06-21')
+    june_21_30 = ee.DateRange('2021-06-21', '2021-07-01')
+
+    july_01_10 = ee.DateRange("2021-07-01", "2021-07-11")
+    july_11_20 = ee.DateRange('2021-07-11', '2021-07-21')
+    july_21_30 = ee.DateRange('2021-07-21', '2021-08-01')
+
+    august_01_10 = ee.DateRange("2021-08-01", "2021-08-11")
+    august_11_20 = ee.DateRange('2021-08-11', '2021-08-21')
+    august_21_30 = ee.DateRange('2021-08-21', '2021-09-01')
+
+    time_window = [
+        june_01_10, june_11_20, june_21_30, 
+        july_01_10, july_11_20, july_21_30, 
+        august_01_10, august_11_20, august_21_30
+    ]
+
+    time_window_name = [
+        'june_01_10', 'june_11_20', 'june_21_30', 
+        'july_01_10', 'july_11_20', 'july_21_30', 
+        'august_01_10', 'august_11_20', 'august_21_30'
+    ]
     
+    aod_collection = config['collections']['aq_collections']['aod_collection']
+    
+    for i, time in enumerate(time_window):
+        for band in aod_collection['bands']:
+            dataset = (
+                ee.ImageCollection(aod_collection['name']) 
+                .filterDate(time) 
+                .filterBounds(coords) 
+                # .median() \
+                .select(band) 
+            )
+            # print(dataset.size().getInfo())
+            data = dataset.sort('DATE_ACQUIRED').toBands()
+            print(data.bandNames().size().getInfo())
+            
+            SAVE_DIR = "../data/tiff/air_quality/AOD/"
+
+            output_file = f"{band}_({time_window_name[i]}).tif"
+            geemap.ee_export_image(
+                data, 
+                filename=SAVE_DIR+output_file, 
+                scale=1000, 
+                region=coords, 
+                file_per_band=False
+            )
+    
+
+# Load AQ factors data from Google Earth Engine API
+def load_AQ_factors_data(config):
+    coords = ee.Geometry.Rectangle(config['coords'])
+    
+    # Air quality factors
+    aq_factors = ['CO', 'HCHO', 'NO2', 'O3', 'SO2']
+
+    # Air quality collection defined in config
+    aq_collection = config['collections']['aq_collections']
+    
+    june_01_july_15 = ee.DateRange('2021-06-01', '2021-07-16')
+    july_16_august_30 = ee.DateRange('2021-07-16', '2021-09-01')
+    
+    time_window = [june_01_july_15, july_16_august_30]
+    time_window_name = ['june_01_july_15', 'july_16_august_30']
+
+    for i, factor in enumerate(aq_factors):
+        factor_collection = list(aq_collection.keys())[i]
+        collection_name = aq_collection[factor_collection]['name']
+        collection_bands = aq_collection[factor_collection]['bands']
+        
+        for band in collection_bands:
+            
+            for i, time in enumerate(time_window):
+                dataset = ee.ImageCollection(collection_name) \
+                    .filterDate(time) \
+                    .filterBounds(coords) \
+                    .select(band)
+                    
+                data = dataset.sort('DATE_ACQUIRED').toBands()
+                print(data.bandNames().size().getInfo())
+                
+                SAVE_DIR = '../data/tiff/air_quality/AQ/'
+                output_file = f"{factor}_{band}_({time_window_name[i]}).tif"
+                geemap.ee_export_image(
+                    data, 
+                    filename=SAVE_DIR+output_file, 
+                    scale=1000, 
+                    region=coords, 
+                    file_per_band=False
+                )
+
 
 if __name__ == "__main__":
     with open("data_pipeline/config.yaml", "r") as file:
@@ -160,5 +232,10 @@ if __name__ == "__main__":
     
     arcgis_config = config['arcgis_query_config']
     soda_config = config['soda_api_config']
-    query_arcgis(arcgis_config)
-    fetch_nyc_data(soda_config)
+    gge_engine_config = config['gge_engine_config']
+    
+    # query_arcgis(arcgis_config)
+    # fetch_nyc_data(soda_config)
+    auth_and_init(gge_engine_config)
+    # load_AOD_data(gge_engine_config)
+    load_AQ_factors_data(gge_engine_config)
