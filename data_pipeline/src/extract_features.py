@@ -94,11 +94,60 @@ def extract_feature_street(readfile, savefile):
     print(f"Data is saved at {SAVE_DIR + savefile}.")
 
 
-if __name__ == "__main__":
-    readfile = READ_DIR + "building.geojson"
-    savefile = "building.geojson"
-    extract_feature_building(readfile, savefile)
+def extract_feature_zoning_nyzd(readfile, savefile):
+    df = gpd.read_file(readfile)
 
-    readfile = READ_DIR + "street.geojson"
-    savefile = "street.geojson"
-    extract_feature_street(readfile, savefile)
+    # Extract from zone district
+    df = df.rename(columns={'ZONEDIST': 'zonedist_level3'})
+    df['zonedist_level2'] = df['zonedist_level3'].str.split("-").str[0]
+    df['zonedist_level1'] = df['zonedist_level3'].str[0]
+
+    # Save data
+    df.to_file(SAVE_DIR + savefile, driver="GeoJSON")
+    print(f"Data is saved at {SAVE_DIR + savefile}.")
+
+
+def extract_feature_zoning_nyco(readfile, savefile):
+    df = gpd.read_file(readfile)
+
+    # Extract from zone district
+    df = df.rename(columns={'OVERLAY': 'overlay_level2'})
+    df['overlay_level1'] = df['overlay_level2'].str.split("-").str[0]
+
+    # Save data
+    df.to_file(SAVE_DIR + savefile, driver="GeoJSON")
+    print(f"Data is saved at {SAVE_DIR + savefile}.")
+
+
+def extract_feature_zoning_nysp(readfile, savefile):
+    df = gpd.read_file(readfile)
+
+    # Extract from zone district
+    df = df.rename(columns={'SDLBL': 'sd_level2'})
+    df['sd_level1'] = df['sd_level2'].str.split("-").str[0]
+
+    # Save data
+    df.to_file(SAVE_DIR + savefile, driver="GeoJSON")
+    print(f"Data is saved at {SAVE_DIR + savefile}.")
+
+
+if __name__ == "__main__":
+    # readfile = READ_DIR + "building.geojson"
+    # savefile = "building.geojson"
+    # extract_feature_building(readfile, savefile)
+
+    # readfile = READ_DIR + "street.geojson"
+    # savefile = "street.geojson"
+    # extract_feature_street(readfile, savefile)
+
+    readfile = READ_DIR + "nyco.geojson"
+    savefile = "nyco.geojson"
+    extract_feature_zoning_nyco(readfile, savefile)
+
+    readfile = READ_DIR + "nyzd.geojson"
+    savefile = "nyzd.geojson"
+    extract_feature_zoning_nyzd(readfile, savefile)
+
+    readfile = READ_DIR + "nysp.geojson"
+    savefile = "nysp.geojson"
+    extract_feature_zoning_nysp(readfile, savefile)
