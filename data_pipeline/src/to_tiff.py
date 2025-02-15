@@ -84,6 +84,19 @@ def mode_cat_values(clipped_df, value_col):
     return raster_value
 
 
+def count_values(clipped_df):
+    count = 0 
+    for _, row in clipped_df.iterrows():
+        count += 1
+
+    if count == 0:
+        raster_value = 0
+    else:
+        raster_value = 1
+    
+    return raster_value
+
+
 ## Wrapper functions
 
 def calculate_raster_value(operation, clipped_df, geometry_col, value_col, grid_cell):
@@ -95,6 +108,8 @@ def calculate_raster_value(operation, clipped_df, geometry_col, value_col, grid_
         raster_value = std_dev_values(clipped_df, value_col)
     elif operation == "mode":
         raster_value = mode_cat_values(clipped_df, value_col)
+    elif operation == "count":
+        raster_value = count_values(clipped_df)
     else:
         print("Operation must be mean, sum, std_dev, or mode")
         return
@@ -218,6 +233,97 @@ def street_tiff(readfile, savefile, resolution):
         dst.write(traffic_dir, 2)
         dst.write(mean_lanes, 3)
         dst.write(orientation, 4)
+
+
+
+def zoning_nyco_tiff(readfile, savefile, resolution):
+    # Load data
+    df = gpd.read_file(readfile)
+    geometry_col = 'geometry'
+
+    # Create raster bounds
+    scale = resolution / 111320.0 # degrees per pixel for crs=4326
+    width = int(np.round((COORDS[2] - COORDS[0]) / scale) + 1)
+    height = int(np.round((COORDS[3] - COORDS[1]) / scale) + 1)
+    gt = rasterio.transform.from_bounds(COORDS[0], COORDS[1], COORDS[2], COORDS[3], width, height)
+
+    # Create raster
+    overlay_level2, _ = rasterize(df, geometry_col, 'overlay_level2', ['mode'],
+                                            gt, height, width)
+    
+    overlay_level1, _ = rasterize(df, geometry_col, 'overlay_level1', ['mode'],
+                                            gt, height, width)
+    
+    # Save raster
+    with rasterio.open(savefile, 'w', driver='GTiff', count=2, crs=df.crs,
+                       dtype=overlay_level1.dtype,
+                       height=height, width=width,
+                       transform=gt) as dst:
+        dst.write(overlay_level1, 1)
+        dst.write(overlay_level2, 2)
+
+
+def zoning_nysp_tiff(readfile, savefile, resolution):
+    # Load data
+    df = gpd.read_file(readfile)
+    geometry_col = 'geometry'
+
+    # Create raster bounds
+    scale = resolution / 111320.0 # degrees per pixel for crs=4326
+    width = int(np.round((COORDS[2] - COORDS[0]) / scale) + 1)
+    height = int(np.round((COORDS[3] - COORDS[1]) / scale) + 1)
+    gt = rasterio.transform.from_bounds(COORDS[0], COORDS[1], COORDS[2], COORDS[3], width, height)
+
+    # Create raster
+    sd_level2, _ = rasterize(df, geometry_col, 'sd_level2', ['mode'],
+                                            gt, height, width)
+    
+    sd_level1, _ = rasterize(df, geometry_col, 'sd_level1', ['mode'],
+                                            gt, height, width)
+    
+    # Save raster
+    with rasterio.open(savefile, 'w', driver='GTiff', count=2, crs=df.crs,
+                       dtype=sd_level1.dtype,
+                       height=height, width=width,
+                       transform=gt) as dst:
+        dst.write(sd_level1, 1)
+        dst.write(sd_level2, 2)
+
+
+def zoning_nyzd_tiff(readfile, savefile, resolution):
+    # Load data
+    df = gpd.read_file(readfile)
+    geometry_col = 'geometry'
+
+    # Create raster bounds
+    scale = resolution / 111320.0 # degrees per pixel for crs=4326
+    width = int(np.round((COORDS[2] - COORDS[0]) / scale) + 1)
+    height = int(np.round((COORDS[3] - COORDS[1]) / scale) + 1)
+    gt = rasterio.transform.from_bounds(COORDS[0], COORDS[1], COORDS[2], COORDS[3], width, height)
+
+    # Create raster
+    zonedist_level3, _ = rasterize(df, geometry_col, 'zonedist_level3', ['mode'],
+                                            gt, height, width)
+    
+    zonedist_level2, _ = rasterize(df, geometry_col, 'overlay_level2', ['mode'],
+                                            gt, height, width)
+    
+    zonedist_level1, _ = rasterize(df, geometry_col, 'overlay_level1', ['mode'],
+                                            gt, height, width)
+    
+    
+    # Create raster for existence
+    
+
+
+    # Save raster
+    with rasterio.open(savefile, 'w', driver='GTiff', count=3, crs=df.crs,
+                       dtype=zonedist_level1.dtype,
+                       height=height, width=width,
+                       transform=gt) as dst:
+        dst.write(zonedist_level1, 1)
+        dst.write(zonedist_level2, 2)
+        dst.write(zonedist_level3, 3)
 
 
 if __name__ == "__main__":

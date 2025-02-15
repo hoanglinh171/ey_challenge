@@ -93,16 +93,37 @@ def filter_street(readfile, savefile):
     df.to_file(SAVE_DIR + savefile, driver="GeoJSON")
     print(f"Data is saved at {SAVE_DIR + savefile}.")
 
-if __name__ == "__main__":
-    readfiles = ['building.json', 'LION.geojson']
-    savefiles = ['building.geojson', 'street.geojson']
 
-    for i in range(len(readfiles)):
-        if os.path.exists(SAVE_DIR + savefiles[i]):
-            print("Data file already exists")
-        else: 
-            readfile = READ_DIR + readfiles[i]
-            if 'building' in readfile:
-                filter_building(readfile, savefiles[i])
-            elif 'LION' in readfile:
-                filter_street(readfile, savefiles[i])
+def filter_zoning(readfile_lst, savefile_lst):
+    # Read data from geojson
+    for i, readfile in enumerate(readfile_lst):
+        df = gpd.read_file(READ_DIR + readfile)
+        print("Load data successfully!")
+
+        # Filter condition
+        df = df.set_geometry('geometry', crs="EPSG:4326")
+        df = df.cx[COORDS[0]:COORDS[2], COORDS[1]:COORDS[3]]
+
+        # Save data
+        df.to_file(SAVE_DIR + savefile_lst[i], driver="GeoJSON")
+        print(f"Data is saved at {SAVE_DIR + savefile_lst[i]}.")
+
+
+if __name__ == "__main__":
+    # readfiles = ['building.json', 'LION.geojson']
+    # savefiles = ['building.geojson', 'street.geojson']
+
+    # for i in range(len(readfiles)):
+    #     if os.path.exists(SAVE_DIR + savefiles[i]):
+    #         print("Data file already exists")
+    #     else: 
+    #         readfile = READ_DIR + readfiles[i]
+    #         if 'building' in readfile:
+    #             filter_building(readfile, savefiles[i])
+    #         elif 'LION' in readfile:
+    #             filter_street(readfile, savefiles[i])
+
+    readfile_lst = ['nyco.geojson', 'nysp.geojson', 'nyzd.geojson']
+    savefile_lst = ['nyco.geojson', 'nysp.geojson', 'nyzd.geojson']
+
+    filter_zoning(readfile_lst, savefile_lst)
