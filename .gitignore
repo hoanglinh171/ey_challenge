@@ -178,7 +178,10 @@ nycgiszoningfeatures_202411shp.zip
 nyclion_24d.zip
 Building_Footprints_20250129.csv
 geo
-data_pipeline/data
+data_pipeline/data/features_extracted
+data_pipeline/data/preprocessed
+data_pipeline/data/raw
+data_pipeline/data/tiff
 data
 data_pipeline/src/gge_engine.py
 models
