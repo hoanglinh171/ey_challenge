@@ -39,13 +39,10 @@ soda_api_config:
   - name: "traffic"
     endpoint: "/7ym2-wayt.json"
 
-# aqs_AQ_api_config:
-#   base_url: "https://aqs.epa.gov/data/api/sampleData/byBbox"
-#   params:
-
 gge_engine_config:
   coords: [-74.01, 40.75, -73.86, 40.88]
   time_window: "2021-06-01/2021-09-01"
+  crs: "EPSG:4326"
   project: "ee-leolincoln9804"
   collections:
     aq_collections:
@@ -63,19 +60,16 @@ gge_engine_config:
         name: 'COPERNICUS/S5P/OFFL/L3_NO2'
         bands: [
           'NO2_column_number_density',
-          # 'cloud_fraction'
         ] 
       o3_collection: 
         name: 'COPERNICUS/S5P/OFFL/L3_O3'
         bands: [
           'O3_column_number_density',
-          # 'cloud_fraction'
         ]
       so2_collection:
         name: 'COPERNICUS/S5P/OFFL/L3_SO2'
         bands: [
           'SO2_column_number_density',
-          # 'cloud_fraction'
         ]
       aod_collection: 
         name: "MODIS/061/MCD19A2_GRANULES"
@@ -83,11 +77,7 @@ gge_engine_config:
           "Optical_Depth_047",
           "Optical_Depth_055",
           "AOD_Uncertainty",
-          # "FineModeFraction",
-          # "Column_WV",
-          # "Injection_Height",
-          # "AOD_QA",
-          # "AngstromExp_470-780"
+          "AOD_QA",
         ]
     demography_collections:
       population: 
