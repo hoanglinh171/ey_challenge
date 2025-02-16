@@ -78,6 +78,8 @@ def mode_cat_values(clipped_df, value_col):
 
     if count == 0:
         raster_value = -1
+    elif count == 1:
+        raster_value = all_values[0]
     else:
         raster_value = mode(all_values)[0]
     
@@ -247,6 +249,16 @@ def zoning_nyco_tiff(readfile, savefile, resolution):
     height = int(np.round((COORDS[3] - COORDS[1]) / scale) + 1)
     gt = rasterio.transform.from_bounds(COORDS[0], COORDS[1], COORDS[2], COORDS[3], width, height)
 
+    # Encoding
+    # ['C1-2', 'C1-3', 'C1-4', 'C1-5', 'C2-1', 'C2-2', 'C2-3', 'C2-4', 'C2-5']
+    # ['C1', 'C2']
+
+    encoder = LabelEncoder()
+    df['overlay_level2'] = encoder.fit_transform(df['overlay_level2'])
+    print(list(encoder.classes_))
+    df['overlay_level1'] = encoder.fit_transform(df['overlay_level1'])
+    print(list(encoder.classes_))
+
     # Create raster
     overlay_level2, _ = rasterize(df, geometry_col, 'overlay_level2', ['mode'],
                                             gt, height, width)
@@ -274,6 +286,15 @@ def zoning_nysp_tiff(readfile, savefile, resolution):
     height = int(np.round((COORDS[3] - COORDS[1]) / scale) + 1)
     gt = rasterio.transform.from_bounds(COORDS[0], COORDS[1], COORDS[2], COORDS[3], width, height)
 
+    # Encoding
+    # ['125th', 'C', 'CL', 'EC-2', 'EC-3', 'EHC', 'ETC', 'GC', 'HP', 'HRP', 'HRW', 'HY', 'IN', 'J', 'L', 'LIC', 'MMU', 'MP', 'MX-1', 'MX-13', 'MX-14', 'MX-15', 'MX-17', 'MX-18', 'MX-23', 'MX-24', 'MX-7', 'MX-9', 'MiD', 'NA-2', 'PC', 'PI', 'SRI', 'TA', 'U', 'WCh']
+    # ['125th', 'C', 'CL', 'EC', 'EHC', 'ETC', 'GC', 'HP', 'HRP', 'HRW', 'HY', 'IN', 'J', 'L', 'LIC', 'MMU', 'MP', 'MX', 'MiD', 'NA', 'PC', 'PI', 'SRI', 'TA', 'U', 'WCh']
+    encoder = LabelEncoder()
+    df['sd_level2'] = encoder.fit_transform(df['sd_level2'])
+    print(list(encoder.classes_))
+    df['sd_level1'] = encoder.fit_transform(df['sd_level1'])
+    print(list(encoder.classes_))
+
     # Create raster
     sd_level2, _ = rasterize(df, geometry_col, 'sd_level2', ['mode'],
                                             gt, height, width)
@@ -300,38 +321,100 @@ def zoning_nyzd_tiff(readfile, savefile, resolution):
     width = int(np.round((COORDS[2] - COORDS[0]) / scale) + 1)
     height = int(np.round((COORDS[3] - COORDS[1]) / scale) + 1)
     gt = rasterio.transform.from_bounds(COORDS[0], COORDS[1], COORDS[2], COORDS[3], width, height)
+    
+    # Encoding
+    # ['C1-7', 'C1-7A', 'C1-8', 'C1-8A', 'C1-8X', 'C1-9', 'C2-7', 'C2-7A', 'C2-8', 'C2-8A', 'C3', 'C4-1', 'C4-2', 'C4-2A', 'C4-2F', 'C4-3', 'C4-4', 'C4-4A', 'C4-4D', 'C4-5', 'C4-5D', 'C4-5X', 'C4-6', 'C4-6A', 'C4-7', 'C5-1', 'C5-1A', 'C5-2', 'C5-2.5', 'C5-3', 'C5-P', 'C6-1', 'C6-2', 'C6-2A', 'C6-3', 'C6-3D', 'C6-3X', 'C6-4', 'C6-4.5', 'C6-4M', 'C6-4X', 'C6-5', 'C6-5.5', 'C6-6', 'C6-6.5', 'C6-7', 'C6-7T', 'C8-1', 'C8-2', 'C8-3', 'C8-4', 'M1-1', 'M1-1/R7-2', 'M1-1A/R7-3', 'M1-2', 'M1-2/R5B', 'M1-2/R5D', 'M1-2/R6A', 'M1-2/R7-2', 'M1-3', 'M1-3/R7X', 'M1-3/R8', 'M1-4', 'M1-4/R6A', 'M1-4/R7-3', 'M1-4/R7A', 'M1-4/R7D', 'M1-4/R7X', 'M1-4/R8A', 'M1-4/R9', 'M1-4/R9A', 'M1-5', 'M1-5/R10', 'M1-5/R6A', 'M1-5/R7-2', 'M1-5/R7-3', 'M1-5/R8A', 'M1-5/R9', 'M1-5/R9-1', 'M1-6', 'M1-6/R10', 'M1-6/R9', 'M2-1', 'M2-2', 'M2-3', 'M2-4', 'M3-1', 'M3-2', 'PARK', 'R1-2', 'R10', 'R10A', 'R10H', 'R2', 'R2A', 'R3-1', 'R3-2', 'R3A', 'R3X', 'R4', 'R4-1', 'R4A', 'R4B', 'R5', 'R5A', 'R5B', 'R5D', 'R6', 'R6-1', 'R6A', 'R6B', 'R7-1', 'R7-2', 'R7-3', 'R7A', 'R7B', 'R7D', 'R7X', 'R8', 'R8A', 'R8B', 'R8X', 'R9', 'R9A', 'R9X']
+    # ['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C8', 'M1', 'M2', 'M3', 'PARK', 'R1', 'R10', 'R10A', 'R10H', 'R2', 'R2A', 'R3', 'R3A', 'R3X', 'R4', 'R4A', 'R4B', 'R5', 'R5A', 'R5B', 'R5D', 'R6', 'R6A', 'R6B', 'R7', 'R7A', 'R7B', 'R7D', 'R7X', 'R8', 'R8A', 'R8B', 'R8X', 'R9', 'R9A', 'R9X']
+    # ['C', 'M', 'P', 'R']
+    encoder = LabelEncoder()
+    df['zonedist_level3'] = encoder.fit_transform(df['zonedist_level3'])
+    print(list(encoder.classes_))
+    df['zonedist_level2'] = encoder.fit_transform(df['zonedist_level2'])
+    print(list(encoder.classes_))
+    df['zonedist_level1'] = encoder.fit_transform(df['zonedist_level1'])
+    print(list(encoder.classes_))
 
     # Create raster
     zonedist_level3, _ = rasterize(df, geometry_col, 'zonedist_level3', ['mode'],
                                             gt, height, width)
     
-    zonedist_level2, _ = rasterize(df, geometry_col, 'overlay_level2', ['mode'],
+    zonedist_level2, _ = rasterize(df, geometry_col, 'zonedist_level2', ['mode'],
                                             gt, height, width)
     
-    zonedist_level1, _ = rasterize(df, geometry_col, 'overlay_level1', ['mode'],
+    zonedist_level1, _ = rasterize(df, geometry_col, 'zonedist_level1', ['mode'],
                                             gt, height, width)
     
     
-    # Create raster for existence
+    # Create raster for existence of R, M, C, P
+    residence_df = df[df['zonedist_level1'] == 3]
+    has_residence, _ = rasterize(residence_df, geometry_col, 'zonedist_level1', ['count'],
+                                 gt, height, width)
     
+    manufacture_df = df[df['zonedist_level1'] == 1]
+    has_manufacture, _ = rasterize(manufacture_df, geometry_col, 'zonedist_level1', ['count'],
+                                 gt, height, width)
+    
+    commercial_df = df[df['zonedist_level1'] == 0]
+    has_commercial, _ = rasterize(commercial_df, geometry_col, 'zonedist_level1', ['count'],
+                                 gt, height, width)
+    
+    park_df = df[df['zonedist_level1'] == 2]
+    has_park, _ = rasterize(park_df, geometry_col, 'zonedist_level1', ['count'],
+                                 gt, height, width)
 
 
     # Save raster
-    with rasterio.open(savefile, 'w', driver='GTiff', count=3, crs=df.crs,
+    with rasterio.open(savefile, 'w', driver='GTiff', count=7, crs=df.crs,
                        dtype=zonedist_level1.dtype,
                        height=height, width=width,
                        transform=gt) as dst:
         dst.write(zonedist_level1, 1)
         dst.write(zonedist_level2, 2)
         dst.write(zonedist_level3, 3)
+        dst.write(has_residence, 4)
+        dst.write(has_manufacture, 5)
+        dst.write(has_commercial, 6)
+        dst.write(has_park, 7)
 
 
 if __name__ == "__main__":
     resolution = 30
-    readfile = READ_DIR + "building.geojson"
-    savefile = SAVE_DIR + f"building_res{resolution}.tiff"
-    building_tiff(readfile, savefile, resolution)
+    # readfile = READ_DIR + "building.geojson"
+    # savefile = SAVE_DIR + f"building_res{resolution}.tiff"
+    # building_tiff(readfile, savefile, resolution)
 
-    readfile = READ_DIR + "street.geojson"
-    savefile = SAVE_DIR + f"street_res{resolution}.tiff"
-    street_tiff(readfile, savefile, resolution)
+    # readfile = READ_DIR + "street.geojson"
+    # savefile = SAVE_DIR + f"street_res{resolution}.tiff"
+    # street_tiff(readfile, savefile, resolution)
+
+    # readfile = READ_DIR + "nyco.geojson"
+    # savefile = SAVE_DIR + f"nyco_res{resolution}.tiff"
+    # zoning_nyco_tiff(readfile, savefile, resolution)
+
+    # readfile = READ_DIR + "nysp.geojson"
+    # savefile = SAVE_DIR + f"nysp_res{resolution}.tiff"
+    # zoning_nysp_tiff(readfile, savefile, resolution)
+
+    # readfile = READ_DIR + "nyzd.geojson"
+    # savefile = SAVE_DIR + f"nyzd_res{resolution}.tiff"
+    # zoning_nyzd_tiff(readfile, savefile, resolution)
+
+    resolution = 100
+    readfile = READ_DIR + "nyzd.geojson"
+    savefile = SAVE_DIR + f"nyzd_res{resolution}.tiff"
+    zoning_nyzd_tiff(readfile, savefile, resolution)
+
+    resolution = 200
+    readfile = READ_DIR + "nyzd.geojson"
+    savefile = SAVE_DIR + f"nyzd_res{resolution}.tiff"
+    zoning_nyzd_tiff(readfile, savefile, resolution)
+
+    # resolution = 500
+    # readfile = READ_DIR + "nyzd.geojson"
+    # savefile = SAVE_DIR + f"nyzd_res{resolution}.tiff"
+    # zoning_nyzd_tiff(readfile, savefile, resolution)
+
+    # resolution = 1000
+    # readfile = READ_DIR + "nyzd.geojson"
+    # savefile = SAVE_DIR + f"nyzd_res{resolution}.tiff"
+    # zoning_nyzd_tiff(readfile, savefile, resolution)
