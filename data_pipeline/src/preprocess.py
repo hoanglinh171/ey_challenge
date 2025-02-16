@@ -3,8 +3,10 @@ import ijson
 import yaml
 import geopandas as gpd
 import pandas as pd
-from shapely.geometry import shape
+from shapely.geometry import shape, box
 import os
+import rasterio
+from rasterio.mask import mask
 
 READ_DIR = "data_pipeline/data/raw/"
 SAVE_DIR = "data_pipeline/data/preprocessed/"
@@ -109,6 +111,27 @@ def filter_zoning(readfile_lst, savefile_lst):
         print(f"Data is saved at {SAVE_DIR + savefile_lst[i]}.")
 
 
+def filter_population_tiff(pop_file, savefile):
+    # Create a Polygon (bounding box) using Shapely
+    bbox_geom = box(COORDS[0], COORDS[1], COORDS[2], COORDS[3])
+
+    # Load the shapely geometry into GeoDataFrame for masking
+    gdf = gpd.GeoDataFrame({"geometry": [bbox_geom]}, crs="EPSG:4326")
+
+    # Open the TIFF file
+    with rasterio.open(pop_file) as src:
+        gdf = gdf.to_crs(src.crs)
+        out_image, out_transform = mask(src, gdf.geometry, crop=True)
+        out_image = out_image.squeeze()
+
+        # Save the clipped image to a new file
+        with rasterio.open(savefile, 'w', savefile, 'w', driver='GTiff', count=1, crs=gdf.crs,
+                    dtype=out_image.dtype,
+                    height=out_image.shape[0], width=out_image.shape[1]) as dst:
+            dst.write(out_image)
+            dst.transform = out_transform
+
+
 if __name__ == "__main__":
     # readfiles = ['building.json', 'LION.geojson']
     # savefiles = ['building.geojson', 'street.geojson']
@@ -123,7 +146,10 @@ if __name__ == "__main__":
     #         elif 'LION' in readfile:
     #             filter_street(readfile, savefiles[i])
 
-    readfile_lst = ['nyco.geojson', 'nysp.geojson', 'nyzd.geojson']
-    savefile_lst = ['nyco.geojson', 'nysp.geojson', 'nyzd.geojson']
+    # readfile_lst = ['nyco.geojson', 'nysp.geojson', 'nyzd.geojson']
+    # savefile_lst = ['nyco.geojson', 'nysp.geojson', 'nyzd.geojson']
 
-    filter_zoning(readfile_lst, savefile_lst)
+    # filter_zoning(readfile_lst, savefile_lst)
+
+    pop_file = "GHS_POP_E2020_GLOBE_R2023A_4326_3ss_V1_0_R5_C11/GHS_POP_E2020_GLOBE_R2023A_4326_3ss_V1_0_R5_C11.tif"
+    filter_population_tiff(READ_DIR + pop_file, "data_pipeline/data/tiff/population_res100.tiff")
