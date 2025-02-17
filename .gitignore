@@ -182,7 +182,6 @@ data_pipeline/data/features_extracted
 data_pipeline/data/preprocessed
 data_pipeline/data/raw
 data_pipeline/data/tiff
-data
 data_pipeline/src/gge_engine.py
 models
 catboost_info
