@@ -132,6 +132,53 @@ def filter_population_tiff(pop_file, savefile):
             dst.transform = out_transform
 
 
+def filter_traffic(readfile, savefile):
+    # # Read data from json
+    # features = []
+    # with open(readfile, "r", encoding="utf-8") as f:
+    #     for feature in ijson.items(f, "item"): 
+    #         features.append(feature)
+    # print("Load data sucessfully!")
+
+    # df = gpd.GeoDataFrame(features)
+
+    # # Drop missing value
+    # df = df.dropna(subset=['the_geom', 'bin', 'cnstrct_yr', 'heightroof'], how='any')
+
+    # # Convert data type
+    # df['lstmoddate'] = pd.to_datetime(df['lstmoddate'])
+    # df['bin'] = df['bin'].astype('int')
+    # df['cnstrct_yr'] = df['cnstrct_yr'].astype('int')
+    # df['heightroof'] = df['heightroof'].astype('float')
+    # df['feat_code'] = df['feat_code'].astype('int')
+
+    # # Filter condition
+    # built_before_2021 = df['cnstrct_yr'] <= 2021
+    # in_mahanttan_bronx = (df['bin'] // 10**6).isin([1, 2])
+    # higher_12_feet = df['heightroof'] >= 12
+    # is_building = df['feat_code'].isin([1006, 2100])
+    # constructed_before_date = (df['lstmoddate'] < '2021-07-24') & (df['lststatype'].isin(['Constructed']))
+    # df = df[built_before_2021 & in_mahanttan_bronx & higher_12_feet & is_building & constructed_before_date]
+
+    # # Filter the areas
+    # df['the_geom'] = df['the_geom'].apply(lambda x: shape(x) if x is not None else x)
+    # df = df.set_geometry('the_geom', crs="EPSG:4326")
+    # df = df.cx[COORDS[0]:COORDS[2], COORDS[1]:COORDS[3]]
+
+    # # Calculate ground area
+    # df = df.to_crs(epsg=2263)
+    # df['shape_area'] = df['the_geom'].area
+    # larger_400_feet = df['shape_area'] >= 400
+    # df = df[larger_400_feet]
+
+    # # Save data
+    # df = df.to_crs(epsg=4326)
+    # df.to_file(SAVE_DIR + savefile, driver="GeoJSON")
+    # print(f"Data is saved at {SAVE_DIR + savefile}.")
+
+    pass
+
+
 if __name__ == "__main__":
     # readfiles = ['building.json', 'LION.geojson']
     # savefiles = ['building.geojson', 'street.geojson']
