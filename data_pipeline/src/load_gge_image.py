@@ -2,6 +2,8 @@
 import ee
 import geemap
 
+import rasterio
+
 import yaml
 import os
 from tqdm import tqdm
@@ -190,12 +192,64 @@ def load_AQ_factors_data(config):
                 file_per_band=False,
             )
 
+
+def scale_aod(read_folder, save_folder):
+    for i, filename in tqdm(enumerate(os.listdir(read_folder))):
+        if filename.endswith(".tif") or filename.endswith(".tiff"):
+            file_path = os.path.join(read_folder, filename)
+            
+            with rasterio.open(file_path) as dst:
+                aod_47 = dst.read(1)
+                aod_55 = dst.read(2)
+                aod_uncertainty = dst.read(3)
+                aod_qa = dst.read(4)
+                transform = dst.transform
+                crs = dst.crs
+                
+            # convert binary
+            aod_qa_bits = np.bitwise_and(np.right_shift(aod_qa, 8), 0b1111)
+
+            # masking array
+            mask = (aod_47 == -28672)
+
+            # convert type
+            aod_47 = aod_47.astype('float')
+            aod_55 = aod_55.astype('float')
+            aod_uncertainty = aod_uncertainty.astype('float')
+            aod_qa_bits = aod_qa_bits.astype('float')
+
+            # replace None
+            aod_47[mask] = np.nan
+            aod_55[mask] = np.nan
+            aod_uncertainty[mask] = np.nan
+            aod_qa_bits[mask] = np.nan
+
+            # scale
+            aod_47 = aod_47 * 0.001
+            aod_55 = aod_55 * 0.001
+            aod_uncertainty = aod_uncertainty * 0.0001
+
+            # save data
+            savefile = os.path.join(save_folder, filename)
+            with rasterio.open(savefile, 'w', driver='GTiff', count=4, crs=crs, transform=transform,
+                    dtype=aod_47.dtype,
+                    height=aod_47.shape[0], width=aod_47.shape[1]) as dst:
+                dst.write(aod_47, 1)
+                dst.write(aod_55, 2)
+                dst.write(aod_uncertainty, 3)
+                dst.write(aod_qa_bits, 4)
+
+
 if __name__ == "__main__":
-    with open("data_pipeline/config.yaml", "r") as file:
-        config = yaml.safe_load(file)
+    # with open("data_pipeline/config.yaml", "r") as file:
+    #     config = yaml.safe_load(file)
     
-    gge_engine_config = config['gge_engine_config']
+    # gge_engine_config = config['gge_engine_config']
     
-    auth_and_init(gge_engine_config)
-    load_AOD_data(gge_engine_config)
-    load_AQ_factors_data(gge_engine_config)
+    # auth_and_init(gge_engine_config)
+    # load_AOD_data(gge_engine_config)
+    # load_AQ_factors_data(gge_engine_config)
+
+    read_folder = "data_pipeline/data/raw/air_quality/AOD/"
+    save_folder = "data_pipeline/data/tiff/air_quality/AOD/"
+    scale_aod(read_folder, save_folder)
