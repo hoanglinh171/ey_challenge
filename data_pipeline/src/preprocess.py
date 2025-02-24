@@ -132,6 +132,7 @@ def filter_population_tiff(pop_file, savefile):
                     height=out_image.shape[0], width=out_image.shape[1],
                     transform=out_transform) as dst:
             dst.write(out_image, 1)
+            dst.set_band_description(1, f'population_res1000')
 
 
 
@@ -157,5 +158,5 @@ if __name__ == "__main__":
 
     # filter_zoning(readfile_lst, savefile_lst)
 
-    pop_file = "GHS_POP_E2020_GLOBE_R2023A_4326_30ss_V1_0_R5_C11/GHS_POP_E2020_GLOBE_R2023A_4326_30ss_V1_0_R5_C11.tif"
+    pop_file = "GHS_POP_E2020_GLOBE_R2023A_4326_30ss_V1_0_R5_C11.tif"
     filter_population_tiff(READ_DIR + pop_file, "data_pipeline/data/tiff/population_res1000.tiff")

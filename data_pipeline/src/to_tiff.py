@@ -180,14 +180,15 @@ def building_tiff(readfile, savefile, resolution):
                                             gt, height, width)
     
     # Save raster
+    bands = [mean_height, std_dev_height, mean_year, building_area]
+    band_names = ['building_height', 'building_height_std', 'building_year', 'building_area']
     with rasterio.open(savefile, 'w', driver='GTiff', count=4, crs=df.crs,
                        dtype=mean_height.dtype,
                        height=height, width=width,
                        transform=gt) as dst:
-        dst.write(mean_height, 1)
-        dst.write(std_dev_height, 2)
-        dst.write(mean_year, 3)
-        dst.write(building_area, 4)
+        for i, band in enumerate(bands):
+            dst.write(band, i+1)
+            dst.set_band_description(i+1, f'{band_names[i]}_res{resolution}')
 
 
 def street_tiff(readfile, savefile, resolution):
@@ -227,14 +228,15 @@ def street_tiff(readfile, savefile, resolution):
 
     
     # Save raster
+    bands = [mean_width, traffic_dir, mean_lanes, orientation]
+    band_names = ['street_width', 'street_traffic', 'street_lanes', 'street_orientation']
     with rasterio.open(savefile, 'w', driver='GTiff', count=4, crs=df.crs,
                        dtype=mean_width.dtype,
                        height=height, width=width,
                        transform=gt) as dst:
-        dst.write(mean_width, 1)
-        dst.write(traffic_dir, 2)
-        dst.write(mean_lanes, 3)
-        dst.write(orientation, 4)
+        for i, band in enumerate(bands):
+            dst.write(band, i+1)
+            dst.set_band_description(i+1, f'{band_names[i]}_res{resolution}')
 
 
 
@@ -267,12 +269,15 @@ def zoning_nyco_tiff(readfile, savefile, resolution):
                                             gt, height, width)
     
     # Save raster
+    bands = [overlay_level2, overlay_level1]
+    band_names = ['overlay_level2', 'overlay_level1']
     with rasterio.open(savefile, 'w', driver='GTiff', count=2, crs=df.crs,
                        dtype=overlay_level1.dtype,
                        height=height, width=width,
                        transform=gt) as dst:
-        dst.write(overlay_level1, 1)
-        dst.write(overlay_level2, 2)
+        for i, band in enumerate(bands):
+            dst.write(band, i+1)
+            dst.set_band_description(i+1, f'{band_names[i]}_res{resolution}')
 
 
 def zoning_nysp_tiff(readfile, savefile, resolution):
@@ -303,12 +308,16 @@ def zoning_nysp_tiff(readfile, savefile, resolution):
                                             gt, height, width)
     
     # Save raster
+    bands = [sd_level1, sd_level2]
+    band_names = ['sd_level1', 'sd_level2']
     with rasterio.open(savefile, 'w', driver='GTiff', count=2, crs=df.crs,
                        dtype=sd_level1.dtype,
                        height=height, width=width,
                        transform=gt) as dst:
-        dst.write(sd_level1, 1)
-        dst.write(sd_level2, 2)
+        for i, band in enumerate(bands):
+            dst.write(band, i+1)
+            dst.set_band_description(i+1, f'{band_names[i]}_res{resolution}')
+
 
 
 def zoning_nyzd_tiff(readfile, savefile, resolution):
@@ -364,40 +373,38 @@ def zoning_nyzd_tiff(readfile, savefile, resolution):
 
 
     # Save raster
+    bands = [zonedist_level1, zonedist_level2, zonedist_level3, has_residence, has_manufacture, has_commercial, has_park]
+    band_names = ['zonedist_level1', 'zonedist_level2', 'zonedist_level3', 'has_residence', 'has_manufacture', 'has_commercial', 'has_park']
     with rasterio.open(savefile, 'w', driver='GTiff', count=7, crs=df.crs,
                        dtype=zonedist_level1.dtype,
                        height=height, width=width,
                        transform=gt) as dst:
-        dst.write(zonedist_level1, 1)
-        dst.write(zonedist_level2, 2)
-        dst.write(zonedist_level3, 3)
-        dst.write(has_residence, 4)
-        dst.write(has_manufacture, 5)
-        dst.write(has_commercial, 6)
-        dst.write(has_park, 7)
+        for i, band in enumerate(bands):
+            dst.write(band, i+1)
+            dst.set_band_description(i+1, f'{band_names[i]}_res{resolution}')
 
 
 if __name__ == "__main__":
     resolution = 30
-    # readfile = READ_DIR + "building.geojson"
-    # savefile = SAVE_DIR + f"building_res{resolution}.tiff"
-    # building_tiff(readfile, savefile, resolution)
+    readfile = READ_DIR + "building.geojson"
+    savefile = SAVE_DIR + f"building_res{resolution}.tiff"
+    building_tiff(readfile, savefile, resolution)
 
-    # readfile = READ_DIR + "street.geojson"
-    # savefile = SAVE_DIR + f"street_res{resolution}.tiff"
-    # street_tiff(readfile, savefile, resolution)
+    readfile = READ_DIR + "street.geojson"
+    savefile = SAVE_DIR + f"street_res{resolution}.tiff"
+    street_tiff(readfile, savefile, resolution)
 
-    # readfile = READ_DIR + "nyco.geojson"
-    # savefile = SAVE_DIR + f"nyco_res{resolution}.tiff"
-    # zoning_nyco_tiff(readfile, savefile, resolution)
+    readfile = READ_DIR + "nyco.geojson"
+    savefile = SAVE_DIR + f"nyco_res{resolution}.tiff"
+    zoning_nyco_tiff(readfile, savefile, resolution)
 
-    # readfile = READ_DIR + "nysp.geojson"
-    # savefile = SAVE_DIR + f"nysp_res{resolution}.tiff"
-    # zoning_nysp_tiff(readfile, savefile, resolution)
+    readfile = READ_DIR + "nysp.geojson"
+    savefile = SAVE_DIR + f"nysp_res{resolution}.tiff"
+    zoning_nysp_tiff(readfile, savefile, resolution)
 
-    # readfile = READ_DIR + "nyzd.geojson"
-    # savefile = SAVE_DIR + f"nyzd_res{resolution}.tiff"
-    # zoning_nyzd_tiff(readfile, savefile, resolution)
+    readfile = READ_DIR + "nyzd.geojson"
+    savefile = SAVE_DIR + f"nyzd_res{resolution}.tiff"
+    zoning_nyzd_tiff(readfile, savefile, resolution)
 
     resolution = 100
     readfile = READ_DIR + "nyzd.geojson"
@@ -409,12 +416,12 @@ if __name__ == "__main__":
     savefile = SAVE_DIR + f"nyzd_res{resolution}.tiff"
     zoning_nyzd_tiff(readfile, savefile, resolution)
 
-    # resolution = 500
-    # readfile = READ_DIR + "nyzd.geojson"
-    # savefile = SAVE_DIR + f"nyzd_res{resolution}.tiff"
-    # zoning_nyzd_tiff(readfile, savefile, resolution)
+    resolution = 500
+    readfile = READ_DIR + "nyzd.geojson"
+    savefile = SAVE_DIR + f"nyzd_res{resolution}.tiff"
+    zoning_nyzd_tiff(readfile, savefile, resolution)
 
-    # resolution = 1000
-    # readfile = READ_DIR + "nyzd.geojson"
-    # savefile = SAVE_DIR + f"nyzd_res{resolution}.tiff"
-    # zoning_nyzd_tiff(readfile, savefile, resolution)
+    resolution = 1000
+    readfile = READ_DIR + "nyzd.geojson"
+    savefile = SAVE_DIR + f"nyzd_res{resolution}.tiff"
+    zoning_nyzd_tiff(readfile, savefile, resolution)

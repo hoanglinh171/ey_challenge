@@ -56,11 +56,11 @@ def process_landsat(config, data):
     landsat_params = config['satellites'][0]
     bands = landsat_params['bands']
     lst_bands = bands[-1]
-    bands.pop(-1)
+    bands_no_lst = bands[:-1]
 
     scale1 = 0.0000275 
     offset1 = -0.2 
-    data[bands] = data[bands].astype(float) * scale1 + offset1
+    data[bands_no_lst] = data[bands_no_lst].astype(float) * scale1 + offset1
 
     scale2 = 0.00341802 
     offset2 = 149.0 
@@ -70,7 +70,13 @@ def process_landsat(config, data):
     return data
 
 
-def save_raster(data, filename):
+def save_raster(data, filename, config, source):
+    if source == 'landsat_8':
+        params = config['satellites'][0]
+    elif source == 'sentinel_2': 
+        params = config['satellites'][1]
+    
+    bands = params['bands']
     height = data.dims["latitude"]
     width = data.dims["longitude"]
         
@@ -86,7 +92,9 @@ def save_raster(data, filename):
                    crs='epsg:4326', transform=gt, count=n_layers, compress='lzw', dtype='float64') as dst:
         for i in range(n_layers):
             dst.write(data[layers[i]], i+1)
+            dst.set_band_description(i+1, f'{bands[i]}')
         dst.close()
+
 
 if __name__ == "__main__":
     with open("data_pipeline/config.yaml", "r") as file:
@@ -96,7 +104,8 @@ if __name__ == "__main__":
 
     data_landsat = load_image(config, "landsat_8")
     data_landsat = process_landsat(config, data_landsat)
-    save_raster(data_landsat, "data_pipeline/data/tiff/landsat_8.tiff")
+    print(len(data_landsat))
+    save_raster(data_landsat, "data_pipeline/data/tiff/landsat_8.tiff", config, "landsat_8")
 
     data_sentinel = load_image(config, "sentinel_2")
-    save_raster(data_sentinel, "data_pipeline/data/tiff/sentinel_2.tiff")
+    save_raster(data_sentinel, "data_pipeline/data/tiff/sentinel_2.tiff", config, "sentinel_2")
