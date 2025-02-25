@@ -52,8 +52,10 @@ def map_satellite_data(tiff_path, csv_path, save_path):
 
 
 if __name__ == "__main__":
+    CSV_PATH = "Submission_template_UHI2025-v2.csv"
+
     read_folder = os.path.join(READ_DIR, "1x1")
-    save_folder = os.path.join(SAVE_DIR, "train/1x1")
+    save_folder = os.path.join(SAVE_DIR, "submission/1x1")
     for i, filename in tqdm(enumerate(os.listdir(read_folder)), desc="1x1"):
         print(filename)
         if filename.endswith(".tif") or filename.endswith(".tiff"):
@@ -66,7 +68,7 @@ if __name__ == "__main__":
                 map_satellite_data(tiff_path=file_path, csv_path=CSV_PATH, save_path=save_path)
 
     read_folder = os.path.join(READ_DIR, "3x3")
-    save_folder = os.path.join(SAVE_DIR, "train/3x3")
+    save_folder = os.path.join(SAVE_DIR, "submission/3x3")
     for i, filename in tqdm(enumerate(os.listdir(read_folder)), desc="3x3"):
         print(filename)
         if filename.endswith(".tif") or filename.endswith(".tiff"):
@@ -79,7 +81,7 @@ if __name__ == "__main__":
                 map_satellite_data(tiff_path=file_path, csv_path=CSV_PATH, save_path=save_path)
 
     read_folder = os.path.join(READ_DIR, "5x5")
-    save_folder = os.path.join(SAVE_DIR, "train/5x5")
+    save_folder = os.path.join(SAVE_DIR, "submission/5x5")
     for i, filename in tqdm(enumerate(os.listdir(read_folder)), desc="5x5"):
         print(filename)
         if filename.endswith(".tif") or filename.endswith(".tiff"):

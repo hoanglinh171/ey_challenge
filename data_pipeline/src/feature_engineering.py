@@ -19,19 +19,28 @@ COORDS = config['coords']
 CRS = config['gge_engine_config']['crs']
 
 
-def calculate_indices(landsat_tiff, savefile, resolution=30):
+def calculate_indices(tiff, savefile, source, resolution):
     scale = resolution / 111320.0
     width = int(np.round((COORDS[2] - COORDS[0]) / scale) + 1)
     height = int(np.round((COORDS[3] - COORDS[1]) / scale) + 1)
     gt = rasterio.transform.from_bounds(COORDS[0], COORDS[1], COORDS[2], COORDS[3], width, height)
 
-    with rasterio.open(landsat_tiff) as dst:
-        red = dst.read(1)
-        blue = dst.read(2)
-        green = dst.read(3)
-        nir08 = dst.read(4)
-        swir16 = dst.read(5)
-        swir22 = dst.read(6)
+    bands = {'red': 1, 'blue': 2, 'green': 3, 'nir': 4, 'swir16': 5, 'swir22': 6}
+    if source == "sentinel_2":
+        bands['red'] = 4
+        bands['blue'] = 2
+        bands['green'] = 3
+        bands['nir'] = 8
+        bands['swir16'] = 11
+        bands['swir22'] = 12
+
+    with rasterio.open(tiff) as dst:
+        red = dst.read(bands['red'])
+        blue = dst.read(bands['blue'])
+        green = dst.read(bands['green'])
+        nir08 = dst.read(bands['nir'])
+        swir16 = dst.read(bands['swir16'])
+        swir22 = dst.read(bands['swir22'])
 
     ndvi = (nir08 - red) / (nir08 + red)
     evi = 2.5 * (nir08 - red) / (nir08 + 6 * red - 7.5 * blue + 1 + 1e-10)
@@ -63,7 +72,7 @@ def calculate_indices(landsat_tiff, savefile, resolution=30):
                        transform=gt) as dst:
         for i, band in enumerate(bands):
             dst.write(band, i+1)
-            dst.set_band_description(i+1, band_names[i])
+            dst.set_band_description(i+1, f'{source}_{band_names[i]}')
 
 
 def building_street_features(building_tiff, street_tiff, savefile, resolution=30):
@@ -94,7 +103,7 @@ def smoothing_filter(raster_arr, operation, size=1):  # 3x3: size = 1, 5x5: size
     m, n = raster_arr.shape
     smoothed_raster = np.zeros((m, n))
 
-    for i in range(m):
+    for i in tqdm(range(m)):
         for j in range(n):
             neighbors = raster_arr[max(i-size, 0):min(i+1+size, m), max(j-size, 0):min(j+1+size, n)]
 
@@ -124,7 +133,7 @@ def smooth_tiff_file(tiff_file, savefile, operation, size=1):
             raster_arr.append(band)
 
     smoothed_raster_arr = []
-    for i, raster in enumerate(raster_arr):
+    for i, raster in tqdm(enumerate(raster_arr), desc="Iterating bands"):
         smoothed_raster = smoothing_filter(raster, operation, size=size)
         smoothed_raster_arr.append(smoothed_raster)
 
@@ -136,9 +145,9 @@ def smooth_tiff_file(tiff_file, savefile, operation, size=1):
 
 
 if __name__ == "__main__":
-    # landsat_tiff = READ_DIR + "landsat_8.tiff"
-    # savefile = SAVE_DIR + "landsat_indices.tiff"
-    # calculate_indices(landsat_tiff, savefile, resolution=30)
+    # tiff = READ_DIR + "sentinel_2.tiff"
+    # savefile = SAVE_DIR + "1x1/sentinel_indices.tiff"
+    # calculate_indices(tiff=tiff, source="sentinel_2", savefile=savefile, resolution=10)
 
     # building_tiff = os.path.join(READ_DIR + "building_res30.tiff")
     # street_tiff = os.path.join(READ_DIR + "street_res30.tiff")
