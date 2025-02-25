@@ -240,6 +240,70 @@ def scale_aod(read_folder, save_folder):
                 dst.write(aod_qa_bits, 4)
 
 
+
+def nanmean_filter(matrix):
+    nan_mask = np.isnan(matrix)
+    filled_matrix = np.copy(matrix)
+
+    # Compute mean using convolution (excluding NaNs)
+    for i in range(matrix.shape[0]):
+        for j in range(matrix.shape[1]):
+            if nan_mask[i, j]:  # If NaN, replace with local mean
+                neighbors = []
+                
+                for di, dj in [(-1, 0), (1, 0), (0, -1), (0, 1)]:  # Up, Down, Left, Right
+                    ni, nj = i + di, j + dj
+                    if 0 <= ni < matrix.shape[0] and 0 <= nj < matrix.shape[1]:
+                        if not np.isnan(matrix[ni, nj]):
+                            neighbors.append(matrix[ni, nj])
+
+                if neighbors:
+                    filled_matrix[i, j] = np.nanmean(neighbors)  # Replace with neighbor mean
+
+    return filled_matrix
+
+
+def calculate_median_aod(read_folder, savefile):
+    aod47_lst = []
+    aod55_lst = []
+
+    for i, filename in tqdm(enumerate(os.listdir(read_folder))):
+        if filename.endswith(".tif") or filename.endswith(".tiff"):
+            file_path = os.path.join(read_folder, filename)
+            
+            with rasterio.open(file_path) as dst:
+                aod_47 = dst.read(1)
+                aod_55 = dst.read(2)
+                transform = dst.transform
+                crs = dst.crs
+            aod47_lst.append(aod_47)
+            aod55_lst.append(aod_55)
+
+    aod47_median = np.nanmedian(np.array(aod47_lst), axis=0)
+    aod55_median = np.nanmedian(np.array(aod55_lst), axis=0)
+
+    filled_aod55 = nanmean_filter(aod55_median)
+    filled_aod47 = nanmean_filter(aod47_median) 
+
+    with rasterio.open(savefile, 'w', driver='GTiff', count=2, crs=crs, transform=transform,
+            dtype=filled_aod47.dtype,
+            height=filled_aod47.shape[0], width=filled_aod47.shape[1]) as dst:
+        dst.write(filled_aod47, 1)
+        dst.write(filled_aod55, 2)
+        dst.set_band_description(1, 'aod47')
+        dst.set_band_description(2, 'aod55')
+
+
+def set_band_name_aq(tiff_file, name):
+    with rasterio.open(tiff_file) as dst:
+        band = dst.read(1)
+        meta = dst.meta
+    
+    with rasterio.open(tiff_file, "w", **meta) as src:
+        src.write(band, 1)
+        src.set_band_description(1, name)
+
+
 if __name__ == "__main__":
     # with open("data_pipeline/config.yaml", "r") as file:
     #     config = yaml.safe_load(file)
@@ -250,6 +314,22 @@ if __name__ == "__main__":
     # load_AOD_data(gge_engine_config)
     # load_AQ_factors_data(gge_engine_config)
 
-    read_folder = "data_pipeline/data/raw/air_quality/AOD/"
-    save_folder = "data_pipeline/data/tiff/air_quality/AOD/"
-    scale_aod(read_folder, save_folder)
+    # read_folder = "data_pipeline/data/raw/air_quality/AOD/"
+    # save_folder = "data_pipeline/data/tiff/air_quality/AOD/"
+    # scale_aod(read_folder, save_folder)
+
+    # read_folder = "data_pipeline/data/tiff/air_quality/AOD/"
+    # savefile = "data_pipeline/data/tiff/aod_median.tiff"
+    # calculate_median_aod(read_folder, savefile)
+
+    tiff_file = "data_pipeline/data/tiff/co_20210724_165223.tif"
+    set_band_name_aq(tiff_file, "co_july24")
+
+    tiff_file = "data_pipeline/data/tiff/no2_20210724_165223.tif"
+    set_band_name_aq(tiff_file, "no2_july24")
+
+    tiff_file = "data_pipeline/data/tiff/hcho_20210724_165223.tif"
+    set_band_name_aq(tiff_file, "hcho_july24")
+
+    tiff_file = "data_pipeline/data/tiff/o3_20210724_165223.tif"
+    set_band_name_aq(tiff_file, "o3_july24")
