@@ -1,13 +1,9 @@
 import numpy as np
-import ijson
+from collections import deque
 import yaml
-import geopandas as gpd
-import pandas as pd
-from shapely.geometry import shape, box
 import os
 import rasterio
 from tqdm import tqdm
-from rasterio.mask import mask
 
 READ_DIR = "data_pipeline/data/tiff/1x1/"
 SAVE_DIR = "data_pipeline/data/tiff/"
@@ -93,10 +89,64 @@ def building_street_features(building_tiff, street_tiff, savefile, resolution=30
 
     bands = [var, building_area_per_pixel]
     band_names = ['var', 'building_area_per_pixel']
+    meta['count'] = 2
     with rasterio.open(savefile, 'w', **meta) as dst:
         for i, band in enumerate(bands):
             dst.write(band, i+1)
             dst.set_band_description(i+1, f'{band_names[i]}_res{resolution}')
+
+
+def calculate_distance(raster_arr):
+    rows, cols = raster_arr.shape
+    dist = np.full((rows, cols), np.inf)
+    queue = deque()
+    
+    # Initialize queue with all '1' positions and set their distance to 0
+    ones = np.argwhere(raster_arr > 0)
+    for r, c in ones:
+        dist[r, c] = 0
+        queue.append((r, c))
+    
+    directions = [
+        (-1, 0, 1), (1, 0, 1), (0, -1, 1), (0, 1, 1),  # Up, Down, Left, Right (distance = 1)
+        (-1, -1, 2**0.5), (-1, 1, 2**0.5), (1, -1, 2**0.5), (1, 1, 2**0.5)  # Diagonal moves (distance = sqrt(2))
+    ]
+    
+    # BFS to compute shortest distances
+    while queue:
+        r, c = queue.popleft()
+        for dr, dc, cost in directions:
+            nr, nc = r + dr, c + dc
+            if 0 <= nr < rows and 0 <= nc < cols:
+                new_dist = dist[r, c] + cost
+                if new_dist < dist[nr, nc]:
+                    dist[nr, nc] = new_dist
+                    queue.append((nr, nc))
+    
+    return dist
+
+
+def zoning_distance(tiff_file, savefile):
+    # calculate the distance of a pixel to the closest distance
+    raster_arr = []
+    with rasterio.open(tiff_file) as dst:
+        band_names = dst.descriptions[3:]
+        meta = dst.meta
+        for i in range(3, 7, 1):
+            band = dst.read(i + 1)
+            raster_arr.append(band)
+
+    distance_raster_arr = []
+    for i, raster in tqdm(enumerate(raster_arr), desc="Iterating bands"):
+        distance_raster = calculate_distance(raster)
+        distance_raster_arr.append(distance_raster)
+
+    # save_tiff
+    meta['count'] = 4
+    with rasterio.open(savefile, 'w', **meta) as dst:
+        for i, band in enumerate(distance_raster_arr):
+            dst.write(band, i+1)
+            dst.set_band_description(i+1, f'{band_names[i]}_distance')
 
 
 def smoothing_filter(raster_arr, operation, size=1):  # 3x3: size = 1, 5x5: size = 2
@@ -149,46 +199,71 @@ if __name__ == "__main__":
     # savefile = SAVE_DIR + "1x1/sentinel_indices.tiff"
     # calculate_indices(tiff=tiff, source="sentinel_2", savefile=savefile, resolution=10)
 
-    # building_tiff = os.path.join(READ_DIR + "building_res30.tiff")
-    # street_tiff = os.path.join(READ_DIR + "street_res30.tiff")
-    # savefile = os.path.join(SAVE_DIR, "building_street_res30.tiff")
-    # building_street_features(building_tiff, street_tiff, savefile, resolution=30)
+    # building_tiff = os.path.join(READ_DIR + "building_res100.tiff")
+    # street_tiff = os.path.join(READ_DIR + "street_res100.tiff")
+    # savefile = os.path.join(SAVE_DIR, "1x1/building_street_res100.tiff")
+    # building_street_features(building_tiff, street_tiff, savefile, resolution=100)
 
-    size = 1
-    for i, filename in tqdm(enumerate(os.listdir(READ_DIR)), desc="3x3"):
-        print(filename)
-        if filename.endswith(".tif") or filename.endswith(".tiff"):
-            file_path = os.path.join(READ_DIR, filename)
+    # zoning_tiff = os.path.join(READ_DIR + "nyzd_res30.tiff")
+    # savefile = os.path.join(SAVE_DIR, "1x1/zoning_res30_distance.tiff")
+    # zoning_distance(zoning_tiff, savefile)
 
-            operation = 'mean'
-            savefile = os.path.join(SAVE_DIR, f"3x3/{size*2+1}x{size*2+1}_{operation}_{filename}")
-            if os.path.exists(savefile):
-                print("File exists!")
-            else:
-                smooth_tiff_file(file_path, savefile, operation, size=size)
+    # size = 1
+    # for i, filename in tqdm(enumerate(os.listdir(READ_DIR)), desc="3x3"):
+    #     print(filename)
+    #     if filename.endswith(".tif") or filename.endswith(".tiff"):
+    #         file_path = os.path.join(READ_DIR, filename)
 
-            operation = 'std_dev'
-            savefile = os.path.join(SAVE_DIR, f"3x3/{size*2+1}x{size*2+1}_{operation}_{filename}")
-            if os.path.exists(savefile):
-                print("File exists!")
-            else:
-                smooth_tiff_file(file_path, savefile, operation, size=size)
+    #         operation = 'mean'
+    #         savefile = os.path.join(SAVE_DIR, f"3x3/{size*2+1}x{size*2+1}_{operation}_{filename}")
+    #         if os.path.exists(savefile):
+    #             print("File exists!")
+    #         else:
+    #             smooth_tiff_file(file_path, savefile, operation, size=size)
+
+    #         operation = 'std_dev'
+    #         savefile = os.path.join(SAVE_DIR, f"3x3/{size*2+1}x{size*2+1}_{operation}_{filename}")
+    #         if os.path.exists(savefile):
+    #             print("File exists!")
+    #         else:
+    #             smooth_tiff_file(file_path, savefile, operation, size=size)
 
     
-    size = 2
-    for i, filename in tqdm(enumerate(os.listdir(READ_DIR)), desc="5x5"):
+    # size = 2
+    # for i, filename in tqdm(enumerate(os.listdir(READ_DIR)), desc="5x5"):
+    #     if filename.endswith(".tif") or filename.endswith(".tiff"):
+    #         file_path = os.path.join(READ_DIR, filename)
+
+    #         operation = 'mean'
+    #         savefile = os.path.join(SAVE_DIR, f"5x5/{size*2+1}x{size*2+1}_{operation}_{filename}")
+    #         if os.path.exists(savefile):
+    #             print("File exists!")
+    #         else:
+    #             smooth_tiff_file(file_path, savefile, operation, size=size)
+
+    #         operation = 'std_dev'
+    #         savefile = os.path.join(SAVE_DIR, f"5x5/{size*2+1}x{size*2+1}_{operation}_{filename}")
+    #         if os.path.exists(savefile):
+    #             print("File exists!")
+    #         else:
+    #             smooth_tiff_file(file_path, savefile, operation, size=size)
+
+
+    size = 4
+    for i, filename in tqdm(enumerate(os.listdir(READ_DIR)), desc="9x9"):
         if filename.endswith(".tif") or filename.endswith(".tiff"):
             file_path = os.path.join(READ_DIR, filename)
+            print(filename)
 
             operation = 'mean'
-            savefile = os.path.join(SAVE_DIR, f"5x5/{size*2+1}x{size*2+1}_{operation}_{filename}")
+            savefile = os.path.join(SAVE_DIR, f"9x9/{size*2+1}x{size*2+1}_{operation}_{filename}")
             if os.path.exists(savefile):
                 print("File exists!")
             else:
                 smooth_tiff_file(file_path, savefile, operation, size=size)
 
             operation = 'std_dev'
-            savefile = os.path.join(SAVE_DIR, f"5x5/{size*2+1}x{size*2+1}_{operation}_{filename}")
+            savefile = os.path.join(SAVE_DIR, f"9x9/{size*2+1}x{size*2+1}_{operation}_{filename}")
             if os.path.exists(savefile):
                 print("File exists!")
             else:
