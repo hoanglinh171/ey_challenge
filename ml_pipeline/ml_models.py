@@ -52,30 +52,35 @@ def get_feature_names(preprocessor, numerical_features, categorical_features):
 
 
 # Experimentation for traditional models with different optimizers
-def run_experiment(df, test_size, target, numerical_features, categorical_features, model, save_folder, model_name):
+def run_experiment(df, test_size, target, numerical_features, categorical_features, model_lst, save_folder, model_name):
     X_train, X_test, y_train, y_test = load_data(df, test_size, target)
     preprocessor = create_feature_engineering_pipeline(numerical_features, categorical_features)
 
-    pipeline = Pipeline([
-        ("preprocessor", preprocessor),
-        ("model", model)
-    ])
+    test_df = pd.DataFrame(y_test.values, columns=['y_test'], index=X_test.index)
+    r_squared_lst = []
+    pipeline_lst = []
+    for i, model in enumerate(model_lst):
+        pipeline = Pipeline([
+            ("preprocessor", preprocessor),
+            ("model", model)
+        ])
 
-    pipeline.fit(X_train, y_train)
-    y_pred = pipeline.predict(X_test)
-    rsquared = r2_score(y_test, y_pred)
-
-    feature_names = get_feature_names(preprocessor, numerical_features, categorical_features)
-
+        pipeline.fit(X_train, y_train)
+        y_pred = pipeline.predict(X_test)
+        rsquared = r2_score(y_test, y_pred)
+        test_df[f'y_pred_{i}'] = y_pred
+        r_squared_lst.append(rsquared)
+        pipeline_lst.append(pipeline)
+        
     # Transform X_test and create DataFrame with correct column names
+    feature_names = get_feature_names(preprocessor, numerical_features, categorical_features)
     X_test_transformed = preprocessor.transform(X_test)
     X_test_df = pd.DataFrame(X_test_transformed, columns=feature_names, index=X_test.index)
-    X_test_df["y_test"] = y_test.values
-    X_test_df["y_pred"] = y_pred
+    test_df = pd.concat([X_test_df, test_df], axis=1)
 
-    X_test_df.to_csv(save_folder + model_name + '.csv')
+    test_df.to_csv(save_folder + model_name + '.csv')
 
-    return rsquared, pipeline
+    return r_squared_lst, pipeline_lst
 
 
 # # Run experiments

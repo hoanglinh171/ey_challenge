@@ -1,4 +1,3 @@
-import json
 import ijson
 import yaml
 import geopandas as gpd
@@ -7,6 +6,10 @@ from shapely.geometry import shape, box
 import os
 import rasterio
 from rasterio.mask import mask
+import rioxarray as rxr
+from pyproj import Transformer
+from affine import Affine
+
 
 READ_DIR = "data_pipeline/data/raw/"
 SAVE_DIR = "data_pipeline/data/preprocessed/"
@@ -15,6 +18,8 @@ os.makedirs(SAVE_DIR, exist_ok=True)
 with open("data_pipeline/config.yaml", "r") as file:
     config = yaml.safe_load(file)
 COORDS = config['coords']
+CRS = config['satellite_config']['params']['crs']
+
 
 def filter_building(readfile, savefile):
     # Read data from json
@@ -135,6 +140,32 @@ def filter_population_tiff(pop_file, savefile):
             dst.set_band_description(1, f'population_res1000')
 
 
+def crop_and_reshape(readfile, savefile):
+    with rasterio.open(readfile) as src:
+        source_crs = src.crs  # Get the source CRS of the TIFF file
+        
+    # Create a transformer to convert coordinates from target CRS to source CRS
+    transformer = Transformer.from_crs(CRS, source_crs, always_xy=True)
+    
+    # Transform the bounding box coordinates
+    xmin_source, ymin_source = transformer.transform(COORDS[0], COORDS[1])
+    xmax_source, ymax_source = transformer.transform(COORDS[2], COORDS[3])
+    
+    # Define the bounding box in the source CRS
+    bbox_source = (xmin_source, ymin_source, xmax_source, ymax_source)
+    
+
+    # Step 1: Open the TIFF file using rioxarray
+    rds = rxr.open_rasterio(readfile)
+    rds_cropped = rds.rio.clip_box(*bbox_source)
+    rds_reprojected = rds_cropped.rio.reproject(CRS)
+
+    # Step 4: Save the cropped and reprojected raster to a new file
+    rds_reprojected.rio.to_raster(savefile)
+
+    with rasterio.open(savefile, 'r+') as dst:
+        dst.set_band_description(1, 'canopy_heigth')
+
 
 if __name__ == "__main__":
     # readfiles = ['building.json', 'LION.geojson']
@@ -158,5 +189,10 @@ if __name__ == "__main__":
 
     # filter_zoning(readfile_lst, savefile_lst)
 
-    pop_file = "GHS_POP_E2020_GLOBE_R2023A_4326_30ss_V1_0_R5_C11.tif"
-    filter_population_tiff(READ_DIR + pop_file, "data_pipeline/data/tiff/population_res1000.tiff")
+    # pop_file = "GHS_POP_E2020_GLOBE_R2023A_4326_30ss_V1_0_R5_C11.tif"
+    # filter_population_tiff(READ_DIR + pop_file, "data_pipeline/data/tiff/population_res1000.tiff")
+
+    readfile = READ_DIR + "032010110.tif"
+    savefile = "data_pipeline/data/tiff/1x1/canopy_height_res1.tif"
+    crop_and_reshape(readfile, savefile)
+
