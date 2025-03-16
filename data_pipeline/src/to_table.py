@@ -107,7 +107,46 @@ if __name__ == "__main__":
             else:
                 map_satellite_data(tiff_path=file_path, csv_path=CSV_PATH, save_path=save_path)
     
+    read_folder = os.path.join(READ_DIR, "15x15")
+    save_folder = os.path.join(SAVE_DIR, "train/15x15")
+    for i, filename in tqdm(enumerate(os.listdir(read_folder)), desc="15x15"):
+        print(filename)
+        if filename.endswith(".tif") or filename.endswith(".tiff"):
+            file_path = os.path.join(read_folder, filename)
+            csv_path = os.path.splitext(filename)[0] + ".csv"
+            save_path = os.path.join(save_folder, csv_path)
+            if os.path.exists(save_path):
+                print("File exists!")
+            else:
+                map_satellite_data(tiff_path=file_path, csv_path=CSV_PATH, save_path=save_path)
+    
 
+    read_folder = os.path.join(READ_DIR, "51x51")
+    save_folder = os.path.join(SAVE_DIR, "train/51x51")
+    for i, filename in tqdm(enumerate(os.listdir(read_folder)), desc="51x51"):
+        print(filename)
+        if filename.endswith(".tif") or filename.endswith(".tiff"):
+            file_path = os.path.join(read_folder, filename)
+            csv_path = os.path.splitext(filename)[0] + ".csv"
+            save_path = os.path.join(save_folder, csv_path)
+            if os.path.exists(save_path):
+                print("File exists!")
+            else:
+                map_satellite_data(tiff_path=file_path, csv_path=CSV_PATH, save_path=save_path)
+
+
+    read_folder = os.path.join(READ_DIR, "25x25")
+    save_folder = os.path.join(SAVE_DIR, "train/25x25")
+    for i, filename in tqdm(enumerate(os.listdir(read_folder)), desc="25x25"):
+        print(filename)
+        if filename.endswith(".tif") or filename.endswith(".tiff"):
+            file_path = os.path.join(read_folder, filename)
+            csv_path = os.path.splitext(filename)[0] + ".csv"
+            save_path = os.path.join(save_folder, csv_path)
+            if os.path.exists(save_path):
+                print("File exists!")
+            else:
+                map_satellite_data(tiff_path=file_path, csv_path=CSV_PATH, save_path=save_path)
     
 
     CSV_PATH = "Submission_template_UHI2025-v2.csv"
@@ -164,4 +203,45 @@ if __name__ == "__main__":
                 print("File exists!")
             else:
                 map_satellite_data(tiff_path=file_path, csv_path=CSV_PATH, save_path=save_path)
+
     
+    read_folder = os.path.join(READ_DIR, "15x15")
+    save_folder = os.path.join(SAVE_DIR, "submission/15x15")
+    for i, filename in tqdm(enumerate(os.listdir(read_folder)), desc="15x15"):
+        print(filename)
+        if filename.endswith(".tif") or filename.endswith(".tiff"):
+            file_path = os.path.join(read_folder, filename)
+            csv_path = os.path.splitext(filename)[0] + ".csv"
+            save_path = os.path.join(save_folder, csv_path)
+            if os.path.exists(save_path):
+                print("File exists!")
+            else:
+                map_satellite_data(tiff_path=file_path, csv_path=CSV_PATH, save_path=save_path)
+
+
+    read_folder = os.path.join(READ_DIR, "25x25")
+    save_folder = os.path.join(SAVE_DIR, "submission/25x25")
+    for i, filename in tqdm(enumerate(os.listdir(read_folder)), desc="25x25"):
+        print(filename)
+        if filename.endswith(".tif") or filename.endswith(".tiff"):
+            file_path = os.path.join(read_folder, filename)
+            csv_path = os.path.splitext(filename)[0] + ".csv"
+            save_path = os.path.join(save_folder, csv_path)
+            if os.path.exists(save_path):
+                print("File exists!")
+            else:
+                map_satellite_data(tiff_path=file_path, csv_path=CSV_PATH, save_path=save_path)
+
+
+    read_folder = os.path.join(READ_DIR, "51x51")
+    save_folder = os.path.join(SAVE_DIR, "submission/51x51")
+    for i, filename in tqdm(enumerate(os.listdir(read_folder)), desc="51x51"):
+        print(filename)
+        if filename.endswith(".tif") or filename.endswith(".tiff"):
+            file_path = os.path.join(read_folder, filename)
+            csv_path = os.path.splitext(filename)[0] + ".csv"
+            save_path = os.path.join(save_folder, csv_path)
+            if os.path.exists(save_path):
+                print("File exists!")
+            else:
+                map_satellite_data(tiff_path=file_path, csv_path=CSV_PATH, save_path=save_path)

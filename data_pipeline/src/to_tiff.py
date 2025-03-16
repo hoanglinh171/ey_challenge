@@ -10,6 +10,8 @@ from pyproj import Transformer
 from shapely.geometry import box, Polygon
 from scipy.stats import mode
 from sklearn.preprocessing import LabelEncoder
+from rasterio.enums import Resampling
+from scipy.ndimage import uniform_filter
 
 
 READ_DIR = "data_pipeline/data/features_extracted/"
@@ -384,44 +386,147 @@ def zoning_nyzd_tiff(readfile, savefile, resolution):
             dst.set_band_description(i+1, f'{band_names[i]}_res{resolution}')
 
 
+## Resampling for available tiff file
+def resample_canopy_height(readfile, savefile, resolution):
+    resolution_degree = resolution / 111035
+
+    with rasterio.open(readfile) as src:
+        # Calculate new width and height
+        data = src.read(1)
+        band_name = src.descriptions
+
+        # Convert to binary (1 for values > 0, 0 otherwise)
+        binary_data = (data > 0).astype(np.uint8)
+
+        block_size = int(resolution_degree/ src.res[0])  # Compute scale factor
+        print(block_size)
+        
+        # Use a uniform filter to count nonzero pixels in each block
+        count_resampled = uniform_filter(binary_data, size=block_size, mode="constant") * (block_size ** 2)
+        count_resampled = count_resampled[::block_size, ::block_size]  # Downsample
+
+        # Define output metadata
+        transform = src.transform * src.transform.scale(
+            (src.width / count_resampled.shape[1]), (src.height / count_resampled.shape[0])
+        )
+        
+        new_meta = src.meta.copy()
+        new_meta.update({
+            "transform": transform,
+            "width": count_resampled.shape[1],
+            "height": count_resampled.shape[0],
+            "count": 2
+        })
+
+        # Perform resampling
+        with rasterio.open(savefile, "w", **new_meta) as dst:
+            dst.write(src.read(1, out_shape=(count_resampled.shape[0], count_resampled.shape[1]), resampling=Resampling.average), 1)
+            dst.write(count_resampled, 2)
+            dst.set_band_description(1, f'{band_name[0]}_res{resolution}')
+            dst.set_band_description(2, f'{band_name[0]}_count_res{resolution}')
+
+
+def osm_edge_tiff(readfile, savefile, resolution):
+    # Load data
+    df = gpd.read_file(readfile)
+    geometry_col = 'geometry'
+
+    # Encode categories
+    encoder = LabelEncoder()
+    df['TrafDir'] = encoder.fit_transform(df['TrafDir'])
+    print(list(encoder.classes_))
+    df['direction'] = encoder.fit_transform(df['direction'])
+    print(list(encoder.classes_))
+
+    # Fill missing values
+    df["street_width_avg"] = df.groupby("RW_TYPE")["street_width_avg"].transform(lambda x: x.fillna(x.median()))
+    df["Number_Total_Lanes"] = df.groupby("RW_TYPE")["Number_Total_Lanes"].transform(lambda x: x.fillna(x.median()))
+
+    # Create raster bounds
+    scale = resolution / 111320.0 # degrees per pixel for crs=4326
+    width = int(np.round((COORDS[2] - COORDS[0]) / scale) + 1)
+    height = int(np.round((COORDS[3] - COORDS[1]) / scale) + 1)
+    gt = rasterio.transform.from_bounds(COORDS[0], COORDS[1], COORDS[2], COORDS[3], width, height)
+
+    # Create raster
+    mean_width, _ = rasterize(df, geometry_col, 'street_width_avg', ['mean'],
+                                            gt, height, width)
+    
+    traffic_dir, _ = rasterize(df, geometry_col, 'TrafDir', ['mode'],
+                                            gt, height, width)
+    
+    mean_lanes, _ = rasterize(df, geometry_col, 'Number_Total_Lanes', ['mean'],
+                                            gt, height, width)
+    
+    orientation, _ = rasterize(df, geometry_col, 'direction', ['mode'],
+                                            gt, height, width)    
+
+    
+    # Save raster
+    bands = [mean_width, traffic_dir, mean_lanes, orientation]
+    band_names = ['street_width', 'street_traffic', 'street_lanes', 'street_orientation']
+    with rasterio.open(savefile, 'w', driver='GTiff', count=4, crs=df.crs,
+                       dtype=mean_width.dtype,
+                       height=height, width=width,
+                       transform=gt) as dst:
+        for i, band in enumerate(bands):
+            dst.write(band, i+1)
+            dst.set_band_description(i+1, f'{band_names[i]}_res{resolution}')
+
+
 if __name__ == "__main__":
-    resolution = 30
-    readfile = READ_DIR + "building.geojson"
-    savefile = SAVE_DIR + f"building_res{resolution}.tiff"
-    building_tiff(readfile, savefile, resolution)
+    # resolution = 30
+    # readfile = READ_DIR + "building.geojson"
+    # savefile = SAVE_DIR + f"building_res{resolution}.tiff"
+    # building_tiff(readfile, savefile, resolution)
 
-    readfile = READ_DIR + "street.geojson"
-    savefile = SAVE_DIR + f"street_res{resolution}.tiff"
-    street_tiff(readfile, savefile, resolution)
+    # readfile = READ_DIR + "street.geojson"
+    # savefile = SAVE_DIR + f"street_res{resolution}.tiff"
+    # street_tiff(readfile, savefile, resolution)
 
-    readfile = READ_DIR + "nyco.geojson"
-    savefile = SAVE_DIR + f"nyco_res{resolution}.tiff"
-    zoning_nyco_tiff(readfile, savefile, resolution)
+    # readfile = READ_DIR + "nyco.geojson"
+    # savefile = SAVE_DIR + f"nyco_res{resolution}.tiff"
+    # zoning_nyco_tiff(readfile, savefile, resolution)
 
-    readfile = READ_DIR + "nysp.geojson"
-    savefile = SAVE_DIR + f"nysp_res{resolution}.tiff"
-    zoning_nysp_tiff(readfile, savefile, resolution)
+    # readfile = READ_DIR + "nysp.geojson"
+    # savefile = SAVE_DIR + f"nysp_res{resolution}.tiff"
+    # zoning_nysp_tiff(readfile, savefile, resolution)
 
-    readfile = READ_DIR + "nyzd.geojson"
-    savefile = SAVE_DIR + f"nyzd_res{resolution}.tiff"
-    zoning_nyzd_tiff(readfile, savefile, resolution)
+    # readfile = READ_DIR + "nyzd.geojson"
+    # savefile = SAVE_DIR + f"nyzd_res{resolution}.tiff"
+    # zoning_nyzd_tiff(readfile, savefile, resolution)
 
-    resolution = 100
-    readfile = READ_DIR + "nyzd.geojson"
-    savefile = SAVE_DIR + f"nyzd_res{resolution}.tiff"
-    zoning_nyzd_tiff(readfile, savefile, resolution)
+    # resolution = 100
+    # readfile = READ_DIR + "nyzd.geojson"
+    # savefile = SAVE_DIR + f"nyzd_res{resolution}.tiff"
+    # zoning_nyzd_tiff(readfile, savefile, resolution)
 
-    resolution = 200
-    readfile = READ_DIR + "nyzd.geojson"
-    savefile = SAVE_DIR + f"nyzd_res{resolution}.tiff"
-    zoning_nyzd_tiff(readfile, savefile, resolution)
+    # resolution = 200
+    # readfile = READ_DIR + "nyzd.geojson"
+    # savefile = SAVE_DIR + f"nyzd_res{resolution}.tiff"
+    # zoning_nyzd_tiff(readfile, savefile, resolution)
 
-    resolution = 500
-    readfile = READ_DIR + "nyzd.geojson"
-    savefile = SAVE_DIR + f"nyzd_res{resolution}.tiff"
-    zoning_nyzd_tiff(readfile, savefile, resolution)
+    # resolution = 500
+    # readfile = READ_DIR + "nyzd.geojson"
+    # savefile = SAVE_DIR + f"nyzd_res{resolution}.tiff"
+    # zoning_nyzd_tiff(readfile, savefile, resolution)
 
-    resolution = 1000
-    readfile = READ_DIR + "nyzd.geojson"
-    savefile = SAVE_DIR + f"nyzd_res{resolution}.tiff"
-    zoning_nyzd_tiff(readfile, savefile, resolution)
+    # resolution = 1000
+    # readfile = READ_DIR + "nyzd.geojson"
+    # savefile = SAVE_DIR + f"nyzd_res{resolution}.tiff"
+    # zoning_nyzd_tiff(readfile, savefile, resolution)
+
+    # resolution = 30
+    # readfile = SAVE_DIR + f"1x1/canopy_height_res1.tif"
+    # savefile = SAVE_DIR + f"1x1/canopy_height_res{resolution}.tif"
+    # resample_canopy_height(readfile, savefile, resolution)
+
+    # resolution = 10
+    # readfile = SAVE_DIR + f"1x1/canopy_height_res1.tif"
+    # savefile = SAVE_DIR + f"1x1/canopy_height_res{resolution}.tif"
+    # resample_canopy_height(readfile, savefile, resolution)
+
+    # resolution = 5
+    # readfile = SAVE_DIR + f"1x1/canopy_height_res1.tif"
+    # savefile = SAVE_DIR + f"1x1/canopy_height_res{resolution}.tif"
+    # resample_canopy_height(readfile, savefile, resolution)
