@@ -188,6 +188,34 @@ def filter_elevation(readfile, savefile):
     df.to_file(SAVE_DIR + savefile, driver="GeoJSON")
     print(f"Data is saved at {SAVE_DIR + savefile}.")
 
+
+def filter_hydro(readfile, savefile):
+    # Read data from json
+    df = gpd.read_file(readfile)
+    print("Load data successfully!")
+
+    # Drop missing value
+    df = df.dropna(subset=['geometry'], how='any')
+
+    # Convert data type
+    df['shape_leng'] = df['shape_leng'].astype('float')
+    df['shape_area'] = df['shape_area'].astype('float')
+    df['feat_code'] = df['feat_code'].astype('float')
+
+    # Filter the areas
+    df['geometry'] = df['geometry'].apply(lambda x: shape(x) if x is not None else x)
+    df = df.set_geometry('geometry', crs="EPSG:4326")
+    df = df.cx[COORDS[0]:COORDS[2], COORDS[1]:COORDS[3]]
+
+    # Filter type
+    df = df[df['feat_code'].isin([2600, 2610, 2620, 2630, 2660])]
+
+    # Save data
+    df = df.to_crs(epsg=4326)
+    df.to_file(SAVE_DIR + savefile, driver="GeoJSON")
+    print(f"Data is saved at {SAVE_DIR + savefile}.")
+
+
 if __name__ == "__main__":
     # readfiles = ['building.json', 'LION.geojson']
     # savefiles = ['building.geojson', 'street.geojson']
@@ -217,7 +245,11 @@ if __name__ == "__main__":
     # savefile = "data_pipeline/data/tiff/1x1/canopy_height_res1.tif"
     # crop_and_reshape(readfile, savefile)
 
-    readfile = READ_DIR + "surface_elevation.geojson"
-    savefile = "surface_elevation.geojson"
-    filter_elevation(readfile, savefile)
+    # readfile = READ_DIR + "surface_elevation.geojson"
+    # savefile = "surface_elevation.geojson"
+    # filter_elevation(readfile, savefile)
+
+    readfile = READ_DIR + "hydrography.geojson"
+    savefile = "hydrography.geojson"
+    filter_hydro(readfile, savefile)
 
