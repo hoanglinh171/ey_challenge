@@ -167,6 +167,27 @@ def crop_and_reshape(readfile, savefile):
         dst.set_band_description(1, 'canopy_heigth')
 
 
+def filter_elevation(readfile, savefile):
+    # Read data from json
+    df = gpd.read_file(readfile)
+    print("Load data successfully!")
+
+    # Drop missing value
+    df = df.dropna(subset=['geometry'], how='any')
+
+    # Convert data type
+    df['elevation'] = df['elevation'].astype('float')
+
+    # Filter the areas
+    df['geometry'] = df['geometry'].apply(lambda x: shape(x) if x is not None else x)
+    df = df.set_geometry('geometry', crs="EPSG:4326")
+    df = df.cx[COORDS[0]:COORDS[2], COORDS[1]:COORDS[3]]
+
+    # Save data
+    df = df.to_crs(epsg=4326)
+    df.to_file(SAVE_DIR + savefile, driver="GeoJSON")
+    print(f"Data is saved at {SAVE_DIR + savefile}.")
+
 if __name__ == "__main__":
     # readfiles = ['building.json', 'LION.geojson']
     # savefiles = ['building.geojson', 'street.geojson']
@@ -192,7 +213,11 @@ if __name__ == "__main__":
     # pop_file = "GHS_POP_E2020_GLOBE_R2023A_4326_30ss_V1_0_R5_C11.tif"
     # filter_population_tiff(READ_DIR + pop_file, "data_pipeline/data/tiff/population_res1000.tiff")
 
-    readfile = READ_DIR + "032010110.tif"
-    savefile = "data_pipeline/data/tiff/1x1/canopy_height_res1.tif"
-    crop_and_reshape(readfile, savefile)
+    # readfile = READ_DIR + "032010110.tif"
+    # savefile = "data_pipeline/data/tiff/1x1/canopy_height_res1.tif"
+    # crop_and_reshape(readfile, savefile)
+
+    readfile = READ_DIR + "surface_elevation.geojson"
+    savefile = "surface_elevation.geojson"
+    filter_elevation(readfile, savefile)
 
