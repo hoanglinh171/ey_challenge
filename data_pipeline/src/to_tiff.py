@@ -563,6 +563,97 @@ def elevation_tiff(readfile, savefile, resolution):
             dst.set_band_description(i+1, f'{band_names[i]}_res{resolution}')
 
     
+def hydro_tiff(readfile, savefile, resolution):
+
+    # Load data
+    df = gpd.read_file(readfile)
+    geometry_col = 'geometry'
+
+    # Create raster bounds
+    scale = resolution / 111320.0 # degrees per pixel for crs=4326
+    width = int(np.round((COORDS[2] - COORDS[0]) / scale) + 1)
+    height = int(np.round((COORDS[3] - COORDS[1]) / scale) + 1)
+    gt = rasterio.transform.from_bounds(COORDS[0], COORDS[1], COORDS[2], COORDS[3], width, height)
+
+    # Create raster
+    water_type, _ = rasterize(df, geometry_col, 'feat_code', ['mode'],
+                                            gt, height, width)
+    
+    water_area, _ = rasterize(df, geometry_col, 'geometry', ['sum_area'],
+                                            gt, height, width)
+    
+    water_area = water_area / ((resolution * 3.28084) ** 2)
+    
+    # Save raster
+    bands = [water_type, water_area]
+    band_names = ['water_type', 'water_area']
+    with rasterio.open(savefile, 'w', driver='GTiff', count=len(bands), crs=df.crs,
+                       dtype=water_area.dtype,
+                       height=height, width=width,
+                       transform=gt) as dst:
+        for i, band in enumerate(bands):
+            dst.write(band, i+1)
+            dst.set_band_description(i+1, f'{band_names[i]}_res{resolution}')
+
+
+def railroad_structure_tiff(readfile, savefile, resolution):
+    # Load data
+    df = gpd.read_file(readfile)
+    geometry_col = 'geometry'
+
+    # Create raster bounds
+    scale = resolution / 111320.0 # degrees per pixel for crs=4326
+    width = int(np.round((COORDS[2] - COORDS[0]) / scale) + 1)
+    height = int(np.round((COORDS[3] - COORDS[1]) / scale) + 1)
+    gt = rasterio.transform.from_bounds(COORDS[0], COORDS[1], COORDS[2], COORDS[3], width, height)
+
+    # Create raster
+    df_vent = df[df['feat_code'] == 2470]
+    ventilation_grate , _ = rasterize(df_vent, geometry_col, 'geometry', ['count'],
+                                            gt, height, width)
+
+    df_subway = df[df['feat_code'].isin([2160, 2140])]
+    subway, _ = rasterize(df_subway, geometry_col, 'geometry', ['count'],
+                                            gt, height, width) 
+    
+    # Save raster
+    bands = [ventilation_grate, subway]
+    band_names = ['ventilation', 'subway_station']
+    with rasterio.open(savefile, 'w', driver='GTiff', count=len(bands), crs=df.crs,
+                       dtype=subway.dtype,
+                       height=height, width=width,
+                       transform=gt) as dst:
+        for i, band in enumerate(bands):
+            dst.write(band, i+1)
+            dst.set_band_description(i+1, f'{band_names[i]}_res{resolution}')
+
+
+def cooling_tower_tiff(readfile, savefile, resolution):
+    # Load data
+    df = gpd.read_file(readfile)
+    geometry_col = 'geometry'
+
+    # Create raster bounds
+    scale = resolution / 111320.0 # degrees per pixel for crs=4326
+    width = int(np.round((COORDS[2] - COORDS[0]) / scale) + 1)
+    height = int(np.round((COORDS[3] - COORDS[1]) / scale) + 1)
+    gt = rasterio.transform.from_bounds(COORDS[0], COORDS[1], COORDS[2], COORDS[3], width, height)
+
+    # Create raster
+    cooling_tower, _ = rasterize(df, geometry_col, 'geometry', ['count'],
+                                            gt, height, width) 
+    
+    # Save raster
+    bands = [cooling_tower]
+    band_names = ['cooling_tower']
+    with rasterio.open(savefile, 'w', driver='GTiff', count=len(bands), crs=df.crs,
+                       dtype=cooling_tower.dtype,
+                       height=height, width=width,
+                       transform=gt) as dst:
+        for i, band in enumerate(bands):
+            dst.write(band, i+1)
+            dst.set_band_description(i+1, f'{band_names[i]}_res{resolution}')
+
 
 if __name__ == "__main__":
     # resolution = 30
@@ -621,43 +712,43 @@ if __name__ == "__main__":
     # savefile = SAVE_DIR + f"1x1/canopy_height_res{resolution}.tif"
     # resample_canopy_height(readfile, savefile, resolution)
 
-    resolution = 1000
-    readfile = READ_DIR + "edges.geojson"
-    savefile = SAVE_DIR + f"edges_res{resolution}.tiff"
-    osm_edge_tiff(readfile, savefile, resolution)
+    # resolution = 1000
+    # readfile = READ_DIR + "edges.geojson"
+    # savefile = SAVE_DIR + f"edges_res{resolution}.tiff"
+    # osm_edge_tiff(readfile, savefile, resolution)
 
-    readfile = READ_DIR + "nodes.geojson"
-    savefile = SAVE_DIR + f"nodes_res{resolution}.tiff"
-    osm_node_tiff(readfile, savefile, resolution)
+    # readfile = READ_DIR + "nodes.geojson"
+    # savefile = SAVE_DIR + f"nodes_res{resolution}.tiff"
+    # osm_node_tiff(readfile, savefile, resolution)
 
-    resolution = 500
-    readfile = READ_DIR + "edges.geojson"
-    savefile = SAVE_DIR + f"edges_res{resolution}.tiff"
-    osm_edge_tiff(readfile, savefile, resolution)
+    # resolution = 500
+    # readfile = READ_DIR + "edges.geojson"
+    # savefile = SAVE_DIR + f"edges_res{resolution}.tiff"
+    # osm_edge_tiff(readfile, savefile, resolution)
 
-    readfile = READ_DIR + "nodes.geojson"
-    savefile = SAVE_DIR + f"nodes_res{resolution}.tiff"
-    osm_node_tiff(readfile, savefile, resolution)
+    # readfile = READ_DIR + "nodes.geojson"
+    # savefile = SAVE_DIR + f"nodes_res{resolution}.tiff"
+    # osm_node_tiff(readfile, savefile, resolution)
 
-    resolution = 100
-    readfile = READ_DIR + "edges.geojson"
-    savefile = SAVE_DIR + f"edges_res{resolution}.tiff"
-    osm_edge_tiff(readfile, savefile, resolution)
+    # resolution = 100
+    # readfile = READ_DIR + "edges.geojson"
+    # savefile = SAVE_DIR + f"edges_res{resolution}.tiff"
+    # osm_edge_tiff(readfile, savefile, resolution)
 
-    readfile = READ_DIR + "nodes.geojson"
-    savefile = SAVE_DIR + f"nodes_res{resolution}.tiff"
-    osm_node_tiff(readfile, savefile, resolution)
+    # readfile = READ_DIR + "nodes.geojson"
+    # savefile = SAVE_DIR + f"nodes_res{resolution}.tiff"
+    # osm_node_tiff(readfile, savefile, resolution)
 
-    resolution = 30
-    readfile = READ_DIR + "edges.geojson"
-    savefile = SAVE_DIR + f"edges_res{resolution}.tiff"
-    osm_edge_tiff(readfile, savefile, resolution)
+    # resolution = 30
+    # readfile = READ_DIR + "edges.geojson"
+    # savefile = SAVE_DIR + f"edges_res{resolution}.tiff"
+    # osm_edge_tiff(readfile, savefile, resolution)
 
-    readfile = READ_DIR + "nodes.geojson"
-    savefile = SAVE_DIR + f"nodes_res{resolution}.tiff"
-    osm_node_tiff(readfile, savefile, resolution)
+    # readfile = READ_DIR + "nodes.geojson"
+    # savefile = SAVE_DIR + f"nodes_res{resolution}.tiff"
+    # osm_node_tiff(readfile, savefile, resolution)
 
-    # READ_DIR = "data_pipeline/data/preprocessed/"
+    READ_DIR = "data_pipeline/data/preprocessed/"
 
     # resolution = 100
     # readfile = READ_DIR + "surface_elevation.geojson"
@@ -668,3 +759,58 @@ if __name__ == "__main__":
     # readfile = READ_DIR + "surface_elevation.geojson"
     # savefile = SAVE_DIR + f"surface_elevation_res{resolution}.tiff"
     # elevation_tiff(readfile, savefile, resolution)
+
+    # resolution = 1000
+    # readfile = READ_DIR + "hydrography.geojson"
+    # savefile = SAVE_DIR + f"hydrography_res{resolution}.tiff"
+    # hydro_tiff(readfile, savefile, resolution)
+
+    # resolution = 500
+    # readfile = READ_DIR + "hydrography.geojson"
+    # savefile = SAVE_DIR + f"hydrography_res{resolution}.tiff"
+    # hydro_tiff(readfile, savefile, resolution)
+
+    # resolution = 100
+    # readfile = READ_DIR + "hydrography.geojson"
+    # savefile = SAVE_DIR + f"hydrography_res{resolution}.tiff"
+    # hydro_tiff(readfile, savefile, resolution)
+
+    # resolution = 1000
+    # readfile = READ_DIR + "railroad_structure.geojson"
+    # savefile = SAVE_DIR + f"railroad_structure_res{resolution}.tiff"
+    # railroad_structure_tiff(readfile, savefile, resolution)
+
+    # resolution = 500
+    # readfile = READ_DIR + "railroad_structure.geojson"
+    # savefile = SAVE_DIR + f"railroad_structure_res{resolution}.tiff"
+    # railroad_structure_tiff(readfile, savefile, resolution)
+
+    # resolution = 100
+    # readfile = READ_DIR + "railroad_structure.geojson"
+    # savefile = SAVE_DIR + f"railroad_structure_res{resolution}.tiff"
+    # railroad_structure_tiff(readfile, savefile, resolution)
+
+    # resolution = 30
+    # readfile = READ_DIR + "railroad_structure.geojson"
+    # savefile = SAVE_DIR + f"railroad_structure_res{resolution}.tiff"
+    # railroad_structure_tiff(readfile, savefile, resolution)
+
+    resolution = 1000
+    readfile = READ_DIR + "cooling_tower.geojson"
+    savefile = SAVE_DIR + f"cooling_tower_res{resolution}.tiff"
+    cooling_tower_tiff(readfile, savefile, resolution)
+
+    resolution = 500
+    readfile = READ_DIR + "cooling_tower.geojson"
+    savefile = SAVE_DIR + f"cooling_tower_res{resolution}.tiff"
+    cooling_tower_tiff(readfile, savefile, resolution)
+
+    resolution = 100
+    readfile = READ_DIR + "cooling_tower.geojson"
+    savefile = SAVE_DIR + f"cooling_tower_res{resolution}.tiff"
+    cooling_tower_tiff(readfile, savefile, resolution)
+
+    resolution = 30
+    readfile = READ_DIR + "cooling_tower.geojson"
+    savefile = SAVE_DIR + f"cooling_tower_res{resolution}.tiff"
+    cooling_tower_tiff(readfile, savefile, resolution)
