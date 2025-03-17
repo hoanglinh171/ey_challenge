@@ -255,83 +255,86 @@ if __name__ == "__main__":
     for i, filename in tqdm(enumerate(os.listdir(READ_DIR)), desc="3x3"):
         print(filename)
         if filename.endswith(".tif") or filename.endswith(".tiff"):
-            file_path = os.path.join(READ_DIR, filename)
+            if (filename.startswith("surface")):
+                file_path = os.path.join(READ_DIR, filename)
 
-            operation = 'mean'
-            savefile = os.path.join(SAVE_DIR, f"3x3/{size*2+1}x{size*2+1}_{operation}_{filename}")
-            if os.path.exists(savefile):
-                print("File exists!")
-            else:
-                smooth_tiff_file(file_path, savefile, operation, size=size)
-
-            operation = 'std_dev'
-            savefile = os.path.join(SAVE_DIR, f"3x3/{size*2+1}x{size*2+1}_{operation}_{filename}")
-            if os.path.exists(savefile):
-                print("File exists!")
-            else:
-                smooth_tiff_file(file_path, savefile, operation, size=size)
-
-            if any(filename.startswith(prefix) for prefix in glcm_lst):
-                savefile = os.path.join(SAVE_DIR, f"3x3/{size*2+1}x{size*2+1}_glcm_{filename}")
+                operation = 'mean'
+                savefile = os.path.join(SAVE_DIR, f"3x3/{size*2+1}x{size*2+1}_{operation}_{filename}")
                 if os.path.exists(savefile):
                     print("File exists!")
                 else:
-                    extract_glcm(file_path, savefile, distance=1, size=size)
+                    smooth_tiff_file(file_path, savefile, operation, size=size)
+
+                operation = 'std_dev'
+                savefile = os.path.join(SAVE_DIR, f"3x3/{size*2+1}x{size*2+1}_{operation}_{filename}")
+                if os.path.exists(savefile):
+                    print("File exists!")
+                else:
+                    smooth_tiff_file(file_path, savefile, operation, size=size)
+
+                if any(filename.startswith(prefix) for prefix in glcm_lst):
+                    savefile = os.path.join(SAVE_DIR, f"3x3/{size*2+1}x{size*2+1}_glcm_{filename}")
+                    if os.path.exists(savefile):
+                        print("File exists!")
+                    else:
+                        extract_glcm(file_path, savefile, distance=1, size=size)
 
     
     size = 2
     for i, filename in tqdm(enumerate(os.listdir(READ_DIR)), desc="5x5"):
         if filename.endswith(".tif") or filename.endswith(".tiff"):
-            file_path = os.path.join(READ_DIR, filename)
+            if (filename.startswith("surface")):
+                file_path = os.path.join(READ_DIR, filename)
 
-            operation = 'mean'
-            savefile = os.path.join(SAVE_DIR, f"5x5/{size*2+1}x{size*2+1}_{operation}_{filename}")
-            if os.path.exists(savefile):
-                print("File exists!")
-            else:
-                smooth_tiff_file(file_path, savefile, operation, size=size)
-
-            operation = 'std_dev'
-            savefile = os.path.join(SAVE_DIR, f"5x5/{size*2+1}x{size*2+1}_{operation}_{filename}")
-            if os.path.exists(savefile):
-                print("File exists!")
-            else:
-                smooth_tiff_file(file_path, savefile, operation, size=size)
-
-            if any(filename.startswith(prefix) for prefix in glcm_lst):
-                savefile = os.path.join(SAVE_DIR, f"5x5/{size*2+1}x{size*2+1}_glcm_{filename}")
+                operation = 'mean'
+                savefile = os.path.join(SAVE_DIR, f"5x5/{size*2+1}x{size*2+1}_{operation}_{filename}")
                 if os.path.exists(savefile):
                     print("File exists!")
                 else:
-                    extract_glcm(file_path, savefile, distance=1, size=size)
+                    smooth_tiff_file(file_path, savefile, operation, size=size)
+
+                operation = 'std_dev'
+                savefile = os.path.join(SAVE_DIR, f"5x5/{size*2+1}x{size*2+1}_{operation}_{filename}")
+                if os.path.exists(savefile):
+                    print("File exists!")
+                else:
+                    smooth_tiff_file(file_path, savefile, operation, size=size)
+
+                if any(filename.startswith(prefix) for prefix in glcm_lst):
+                    savefile = os.path.join(SAVE_DIR, f"5x5/{size*2+1}x{size*2+1}_glcm_{filename}")
+                    if os.path.exists(savefile):
+                        print("File exists!")
+                    else:
+                        extract_glcm(file_path, savefile, distance=1, size=size)
 
 
     size = 4
     for i, filename in tqdm(enumerate(os.listdir(READ_DIR)), desc="9x9"):
         if filename.endswith(".tif") or filename.endswith(".tiff"):
-            file_path = os.path.join(READ_DIR, filename)
-            print(filename)
+            if (filename.startswith("surface")):
+                file_path = os.path.join(READ_DIR, filename)
+                print(filename)
 
-            operation = 'mean'
-            savefile = os.path.join(SAVE_DIR, f"9x9/{size*2+1}x{size*2+1}_{operation}_{filename}")
-            if os.path.exists(savefile):
-                print("File exists!")
-            else:
-                smooth_tiff_file(file_path, savefile, operation, size=size)
-
-            operation = 'std_dev'
-            savefile = os.path.join(SAVE_DIR, f"9x9/{size*2+1}x{size*2+1}_{operation}_{filename}")
-            if os.path.exists(savefile):
-                print("File exists!")
-            else:
-                smooth_tiff_file(file_path, savefile, operation, size=size)
-
-            if any(filename.startswith(prefix) for prefix in glcm_lst):
-                savefile = os.path.join(SAVE_DIR, f"9x9/{size*2+1}x{size*2+1}_glcm_{filename}")
+                operation = 'mean'
+                savefile = os.path.join(SAVE_DIR, f"9x9/{size*2+1}x{size*2+1}_{operation}_{filename}")
                 if os.path.exists(savefile):
                     print("File exists!")
                 else:
-                    extract_glcm(file_path, savefile, distance=2, size=size)
+                    smooth_tiff_file(file_path, savefile, operation, size=size)
+
+                operation = 'std_dev'
+                savefile = os.path.join(SAVE_DIR, f"9x9/{size*2+1}x{size*2+1}_{operation}_{filename}")
+                if os.path.exists(savefile):
+                    print("File exists!")
+                else:
+                    smooth_tiff_file(file_path, savefile, operation, size=size)
+
+                if any(filename.startswith(prefix) for prefix in glcm_lst):
+                    savefile = os.path.join(SAVE_DIR, f"9x9/{size*2+1}x{size*2+1}_glcm_{filename}")
+                    if os.path.exists(savefile):
+                        print("File exists!")
+                    else:
+                        extract_glcm(file_path, savefile, distance=2, size=size)
 
 
     size = 7
@@ -339,35 +342,37 @@ if __name__ == "__main__":
         if filename.endswith(".tif") or filename.endswith(".tiff"):
             print(filename)
 
-            file_path = os.path.join(READ_DIR, filename)
+            if (filename.startswith("surface")):
+                file_path = os.path.join(READ_DIR, filename)
 
-            operation = 'mean'
-            savefile = os.path.join(SAVE_DIR, f"15x15/{size*2+1}x{size*2+1}_{operation}_{filename}")
-            if os.path.exists(savefile):
-                print("File exists!")
-            else:
-                smooth_tiff_file(file_path, savefile, operation, size=size)
-
-            operation = 'std_dev'
-            savefile = os.path.join(SAVE_DIR, f"15x15/{size*2+1}x{size*2+1}_{operation}_{filename}")
-            if os.path.exists(savefile):
-                print("File exists!")
-            else:
-                smooth_tiff_file(file_path, savefile, operation, size=size)
-
-            if any(filename.startswith(prefix) for prefix in glcm_lst):
-                savefile = os.path.join(SAVE_DIR, f"15x15/{size*2+1}x{size*2+1}_glcm_{filename}")
+                operation = 'mean'
+                savefile = os.path.join(SAVE_DIR, f"15x15/{size*2+1}x{size*2+1}_{operation}_{filename}")
                 if os.path.exists(savefile):
                     print("File exists!")
                 else:
-                    extract_glcm(file_path, savefile, distance=3, size=size)
+                    smooth_tiff_file(file_path, savefile, operation, size=size)
+
+                operation = 'std_dev'
+                savefile = os.path.join(SAVE_DIR, f"15x15/{size*2+1}x{size*2+1}_{operation}_{filename}")
+                if os.path.exists(savefile):
+                    print("File exists!")
+                else:
+                    smooth_tiff_file(file_path, savefile, operation, size=size)
+
+                if any(filename.startswith(prefix) for prefix in glcm_lst):
+                    savefile = os.path.join(SAVE_DIR, f"15x15/{size*2+1}x{size*2+1}_glcm_{filename}")
+                    if os.path.exists(savefile):
+                        print("File exists!")
+                    else:
+                        extract_glcm(file_path, savefile, distance=3, size=size)
             
     
     size = 12
     for i, filename in tqdm(enumerate(os.listdir(READ_DIR)), desc="25x25"):
         if filename.endswith(".tif") or filename.endswith(".tiff"):
             print(filename)
-            if (filename.startswith("landsat") or filename.startswith("canopy") or filename.startswith("building") or filename.startswith("street")):
+            if (filename.startswith("surface")):
+                # if (filename.startswith("landsat") or filename.startswith("canopy") or filename.startswith("building") or filename.startswith("street")):
                 file_path = os.path.join(READ_DIR, filename)
 
                 operation = 'mean'
@@ -396,7 +401,8 @@ if __name__ == "__main__":
     for i, filename in tqdm(enumerate(os.listdir(READ_DIR)), desc="51x51"):
         if filename.endswith(".tif") or filename.endswith(".tiff"):
             print(filename)
-            if (filename.startswith("landsat") or filename.startswith("canopy") or filename.startswith("building") or filename.startswith("street")):
+            if (filename.startswith("surface")):
+                # (filename.startswith("landsat") or filename.startswith("canopy") or filename.startswith("building") or filename.startswith("street")):
                 file_path = os.path.join(READ_DIR, filename)
 
                 operation = 'mean'
@@ -425,7 +431,8 @@ if __name__ == "__main__":
     for i, filename in tqdm(enumerate(os.listdir(READ_DIR)), desc="101x101"):
         if filename.endswith(".tif") or filename.endswith(".tiff"):
             print(filename)
-            if (filename.startswith("landsat") or filename.startswith("canopy") or filename.startswith("building") or filename.startswith("street")):
+            if (filename.startswith("surface")):
+                #  or filename.startswith("canopy") or filename.startswith("building") or filename.startswith("street")):
                 file_path = os.path.join(READ_DIR, filename)
 
                 operation = 'mean'

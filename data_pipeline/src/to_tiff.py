@@ -12,10 +12,11 @@ from scipy.stats import mode
 from sklearn.preprocessing import LabelEncoder
 from rasterio.enums import Resampling
 from scipy.ndimage import uniform_filter
+from scipy.stats import entropy
 
 
 READ_DIR = "data_pipeline/data/features_extracted/"
-SAVE_DIR = "data_pipeline/data/tiff/"
+SAVE_DIR = "data_pipeline/data/tiff/1x1/"
 os.makedirs(SAVE_DIR, exist_ok=True)
 
 with open("data_pipeline/config.yaml", "r") as file:
@@ -96,9 +97,23 @@ def count_values(clipped_df):
     if count == 0:
         raster_value = 0
     else:
-        raster_value = 1
+        raster_value = count
     
     return raster_value
+
+
+def entropy_values(clipped_df, value_col, bin_width=3):
+    bins = np.arange(0, 180 + bin_width, bin_width)
+    labels = [f"{int(b)}-{int(b+bin_width)}" for b in bins[:-1]]
+    value_bin = pd.cut(clipped_df[value_col], bins=bins, labels=labels, include_lowest=True, right=False)
+
+    # 2. Count frequencies per bin
+    freq = value_bin.value_counts().sort_index()
+
+    # 3. Convert to probabilities
+    probs = freq / freq.sum()
+
+    return entropy(probs, base=np.e)
 
 
 ## Wrapper functions
@@ -114,6 +129,8 @@ def calculate_raster_value(operation, clipped_df, geometry_col, value_col, grid_
         raster_value = mode_cat_values(clipped_df, value_col)
     elif operation == "count":
         raster_value = count_values(clipped_df)
+    elif operation == "entropy":
+        raster_value = entropy_values(clipped_df, value_col)
     else:
         print("Operation must be mean, sum, std_dev, or mode")
         return
@@ -431,16 +448,40 @@ def osm_edge_tiff(readfile, savefile, resolution):
     df = gpd.read_file(readfile)
     geometry_col = 'geometry'
 
-    # Encode categories
-    encoder = LabelEncoder()
-    df['TrafDir'] = encoder.fit_transform(df['TrafDir'])
-    print(list(encoder.classes_))
-    df['direction'] = encoder.fit_transform(df['direction'])
-    print(list(encoder.classes_))
+    # Create raster bounds
+    scale = resolution / 111320.0 # degrees per pixel for crs=4326
+    width = int(np.round((COORDS[2] - COORDS[0]) / scale) + 1)
+    height = int(np.round((COORDS[3] - COORDS[1]) / scale) + 1)
+    gt = rasterio.transform.from_bounds(COORDS[0], COORDS[1], COORDS[2], COORDS[3], width, height)
 
-    # Fill missing values
-    df["street_width_avg"] = df.groupby("RW_TYPE")["street_width_avg"].transform(lambda x: x.fillna(x.median()))
-    df["Number_Total_Lanes"] = df.groupby("RW_TYPE")["Number_Total_Lanes"].transform(lambda x: x.fillna(x.median()))
+    # Create raster
+    mean_length, segment_count, _ = rasterize(df, geometry_col, 'length', ['mean', 'count'],
+                                              gt, height, width)
+    
+    total_length = mean_length * segment_count
+    
+    degree_orientation, entropy_orientation, _ = rasterize(df, geometry_col, 'orientation', ['mode', 'entropy'],
+                                            gt, height, width)
+    
+    mean_circuity, _ = rasterize(df, geometry_col, 'circuity', ['mean'],
+                                            gt, height, width)
+    
+    # Save raster
+    bands = [mean_length, segment_count, total_length, degree_orientation, entropy_orientation, mean_circuity]
+    band_names = ['segment_avg_length', 'segment_count', 'segment_total_length', 'degree_orientation', 'entropy_orientation', 'mean_circuity']
+    with rasterio.open(savefile, 'w', driver='GTiff', count=len(bands), crs=df.crs,
+                       dtype=mean_length.dtype,
+                       height=height, width=width,
+                       transform=gt) as dst:
+        for i, band in enumerate(bands):
+            dst.write(band, i+1)
+            dst.set_band_description(i+1, f'{band_names[i]}_res{resolution}')
+
+
+def osm_node_tiff(readfile, savefile, resolution):
+    # Load data
+    df = gpd.read_file(readfile)
+    geometry_col = 'geometry'
 
     # Create raster bounds
     scale = resolution / 111320.0 # degrees per pixel for crs=4326
@@ -449,30 +490,79 @@ def osm_edge_tiff(readfile, savefile, resolution):
     gt = rasterio.transform.from_bounds(COORDS[0], COORDS[1], COORDS[2], COORDS[3], width, height)
 
     # Create raster
-    mean_width, _ = rasterize(df, geometry_col, 'street_width_avg', ['mean'],
+    connnectivity_index, node_density, entropy_degree, _ = rasterize(df, geometry_col, 'degree', ['mean', 'count', 'entropy'],
+                                                                                  gt, height, width)
+    
+    closeness_100, _ = rasterize(df, geometry_col, 'closeness_100', ['mean'],
+                                 gt, height, width)
+    
+    closeness_500, _ = rasterize(df, geometry_col, 'closeness_500', ['mean'],
                                             gt, height, width)
     
-    traffic_dir, _ = rasterize(df, geometry_col, 'TrafDir', ['mode'],
+    closeness_1000, _ = rasterize(df, geometry_col, 'closeness_1000', ['mean'],
                                             gt, height, width)
     
-    mean_lanes, _ = rasterize(df, geometry_col, 'Number_Total_Lanes', ['mean'],
-                                            gt, height, width)
-    
-    orientation, _ = rasterize(df, geometry_col, 'direction', ['mode'],
-                                            gt, height, width)    
+    df_intersection = df[df['degree'] >= 3]
+    # print(df_intersection.shape)
 
+    intersection_count, _ = rasterize(df_intersection, geometry_col, 'degree', ['count'], 
+                                   gt, height, width)
     
     # Save raster
-    bands = [mean_width, traffic_dir, mean_lanes, orientation]
-    band_names = ['street_width', 'street_traffic', 'street_lanes', 'street_orientation']
-    with rasterio.open(savefile, 'w', driver='GTiff', count=4, crs=df.crs,
-                       dtype=mean_width.dtype,
+    bands = [connnectivity_index, node_density, entropy_degree, closeness_100, closeness_500, closeness_1000, intersection_count]
+    band_names = ['connectivity', 'node_density', 'entropy_degree', 'closeness_100', 'closeness_500', 'closeness_1000', 'intersection']
+    with rasterio.open(savefile, 'w', driver='GTiff', count=len(bands), crs=df.crs,
+                       dtype=closeness_100.dtype,
                        height=height, width=width,
                        transform=gt) as dst:
         for i, band in enumerate(bands):
             dst.write(band, i+1)
             dst.set_band_description(i+1, f'{band_names[i]}_res{resolution}')
 
+
+def elevation_tiff(readfile, savefile, resolution):
+    # Load data
+    df = gpd.read_file(readfile)
+    geometry_col = 'geometry'
+
+    # Create raster bounds
+    scale = resolution / 111320.0 # degrees per pixel for crs=4326
+    width = int(np.round((COORDS[2] - COORDS[0]) / scale) + 1)
+    height = int(np.round((COORDS[3] - COORDS[1]) / scale) + 1)
+    gt = rasterio.transform.from_bounds(COORDS[0], COORDS[1], COORDS[2], COORDS[3], width, height)
+
+    # Create raster
+    mean_elevation, _ = rasterize(df, geometry_col, 'elevation', ['mean'],
+                                            gt, height, width)
+
+    mean_elevation[mean_elevation == 0] = np.nan
+    m, n = mean_elevation.shape
+    for i in range(m):
+        for j in range(n):
+            if np.isnan(mean_elevation[i, j]):
+                mean_elevation[i, j] = np.nanmean([mean_elevation[i, max(j-1, 0)],
+                                               mean_elevation[i, min(j+1, n-1)],
+                                               mean_elevation[max(i-1, 0), j],
+                                               mean_elevation[min(i+1, m-1), j]
+                                               ]
+                )
+
+            if np.isnan(mean_elevation[i, j]):
+                mean_elevation[i, j] = 0
+
+
+    # Save raster
+    bands = [mean_elevation]
+    band_names = ['surface_elevation']
+    with rasterio.open(savefile, 'w', driver='GTiff', count=len(bands), crs=df.crs,
+                       dtype=mean_elevation.dtype,
+                       height=height, width=width,
+                       transform=gt) as dst:
+        for i, band in enumerate(bands):
+            dst.write(band, i+1)
+            dst.set_band_description(i+1, f'{band_names[i]}_res{resolution}')
+
+    
 
 if __name__ == "__main__":
     # resolution = 30
@@ -530,3 +620,51 @@ if __name__ == "__main__":
     # readfile = SAVE_DIR + f"1x1/canopy_height_res1.tif"
     # savefile = SAVE_DIR + f"1x1/canopy_height_res{resolution}.tif"
     # resample_canopy_height(readfile, savefile, resolution)
+
+    resolution = 1000
+    readfile = READ_DIR + "edges.geojson"
+    savefile = SAVE_DIR + f"edges_res{resolution}.tiff"
+    osm_edge_tiff(readfile, savefile, resolution)
+
+    readfile = READ_DIR + "nodes.geojson"
+    savefile = SAVE_DIR + f"nodes_res{resolution}.tiff"
+    osm_node_tiff(readfile, savefile, resolution)
+
+    resolution = 500
+    readfile = READ_DIR + "edges.geojson"
+    savefile = SAVE_DIR + f"edges_res{resolution}.tiff"
+    osm_edge_tiff(readfile, savefile, resolution)
+
+    readfile = READ_DIR + "nodes.geojson"
+    savefile = SAVE_DIR + f"nodes_res{resolution}.tiff"
+    osm_node_tiff(readfile, savefile, resolution)
+
+    resolution = 100
+    readfile = READ_DIR + "edges.geojson"
+    savefile = SAVE_DIR + f"edges_res{resolution}.tiff"
+    osm_edge_tiff(readfile, savefile, resolution)
+
+    readfile = READ_DIR + "nodes.geojson"
+    savefile = SAVE_DIR + f"nodes_res{resolution}.tiff"
+    osm_node_tiff(readfile, savefile, resolution)
+
+    resolution = 30
+    readfile = READ_DIR + "edges.geojson"
+    savefile = SAVE_DIR + f"edges_res{resolution}.tiff"
+    osm_edge_tiff(readfile, savefile, resolution)
+
+    readfile = READ_DIR + "nodes.geojson"
+    savefile = SAVE_DIR + f"nodes_res{resolution}.tiff"
+    osm_node_tiff(readfile, savefile, resolution)
+
+    # READ_DIR = "data_pipeline/data/preprocessed/"
+
+    # resolution = 100
+    # readfile = READ_DIR + "surface_elevation.geojson"
+    # savefile = SAVE_DIR + f"surface_elevation_res{resolution}.tiff"
+    # elevation_tiff(readfile, savefile, resolution)
+
+    # resolution = 30
+    # readfile = READ_DIR + "surface_elevation.geojson"
+    # savefile = SAVE_DIR + f"surface_elevation_res{resolution}.tiff"
+    # elevation_tiff(readfile, savefile, resolution)
