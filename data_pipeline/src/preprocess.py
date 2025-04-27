@@ -268,6 +268,41 @@ def filter_cooling_tower(readfile, savefile):
     print(f"Data is saved at {SAVE_DIR + savefile}.")
 
 
+def filter_green_infra(readfile, savefile):
+    # Read data from json
+    df = gpd.read_file(readfile)
+    print("Load data successfully!")
+
+    df = df.dropna(subset=['geometry'])
+
+    df = df.set_geometry('geometry', crs="EPSG:4326")
+    df = df.cx[COORDS[0]:COORDS[2], COORDS[1]:COORDS[3]]
+
+    # Save data
+    df = df.to_crs(epsg=4326)
+    df.to_file(SAVE_DIR + savefile, driver="GeoJSON")
+    print(f"Data is saved at {SAVE_DIR + savefile}.")
+
+
+def filter_tree_points(readfile, savefile):
+    # Read data from json
+    df = gpd.read_file(readfile)
+    print("Load data successfully!")
+
+    df = df.dropna(subset=['geometry'])
+
+    # Convert data type
+    df['stumpdiameter'] = df['stumpdiameter'].astype('float')
+    df['dbh'] = df['dbh'].astype('float')
+
+    df = df.set_geometry('geometry', crs="EPSG:4326")
+    df = df.cx[COORDS[0]:COORDS[2], COORDS[1]:COORDS[3]]
+
+    # Save data
+    df = df.to_crs(epsg=4326)
+    df.to_file(SAVE_DIR + savefile, driver="GeoJSON")
+    print(f"Data is saved at {SAVE_DIR + savefile}.")
+
 
 if __name__ == "__main__":
     # readfiles = ['building.json', 'LION.geojson']
@@ -310,8 +345,16 @@ if __name__ == "__main__":
     # savefile = "railroad_structure.geojson"
     # filter_railroad_structure(readfile, savefile)
 
-    readfile = READ_DIR + "cooling_tower.csv"
-    savefile = "cooling_tower.geojson"
-    filter_cooling_tower(readfile, savefile)
+    # readfile = READ_DIR + "cooling_tower.csv"
+    # savefile = "cooling_tower.geojson"
+    # filter_cooling_tower(readfile, savefile)
+
+    # readfile = READ_DIR + "green_infrastructure.geojson"
+    # savefile = "green_infrastructure.geojson"
+    # filter_green_infra(readfile, savefile)
+
+    readfile = READ_DIR + "tree_points.geojson"
+    savefile = "tree_points.geojson"
+    filter_tree_points(readfile, savefile)
 
 

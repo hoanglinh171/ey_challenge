@@ -44,6 +44,7 @@ def mean_values(clipped_df, value_col):
     total = 0
     count = 0 
     for _, row in clipped_df.iterrows():
+        # if row[value_col] is not None:
         total += row[value_col]
         count += 1
 
@@ -195,12 +196,16 @@ def building_tiff(readfile, savefile, resolution):
     mean_year, _ = rasterize(df, geometry_col, 'cnstrct_yr', ['mean'],
                                             gt, height, width)
     
-    building_area, _ = rasterize(df, geometry_col, 'geometry', ['sum_area'],
-                                            gt, height, width)
+    # building_area, _ = rasterize(df, geometry_col, 'geometry', ['sum_area'],
+                                            # gt, height, width)
     
     # Save raster
-    bands = [mean_height, std_dev_height, mean_year, building_area]
-    band_names = ['building_height', 'building_height_std', 'building_year', 'building_area']
+    bands = [mean_height, std_dev_height, mean_year, 
+            #  building_area
+             ]
+    band_names = ['building_height', 'building_height_std', 'building_year', 
+                #   'building_area'
+                  ]
     with rasterio.open(savefile, 'w', driver='GTiff', count=4, crs=df.crs,
                        dtype=mean_height.dtype,
                        height=height, width=width,
@@ -214,6 +219,9 @@ def street_tiff(readfile, savefile, resolution):
     # Load data
     df = gpd.read_file(readfile)
     geometry_col = 'geometry'
+
+    # Convert type
+    df['RW_TYPE'] = df['RW_TYPE'].astype('int')
 
     # Encode categories
     encoder = LabelEncoder()
@@ -244,12 +252,19 @@ def street_tiff(readfile, savefile, resolution):
     
     orientation, _ = rasterize(df, geometry_col, 'direction', ['mode'],
                                             gt, height, width)    
-
     
+    street_type, _ = rasterize(df, geometry_col, 'RW_TYPE', ['mode'],
+                               gt, height, width)
+    
+    df_highway = df[df['RW_TYPE'] == 2]
+    high_way, _ = rasterize(df_highway, geometry_col, 'RW_TYPE', ['count'],
+                               gt, height, width)
+    high_way[high_way >= 1] = 1
+
     # Save raster
-    bands = [mean_width, traffic_dir, mean_lanes, orientation]
-    band_names = ['street_width', 'street_traffic', 'street_lanes', 'street_orientation']
-    with rasterio.open(savefile, 'w', driver='GTiff', count=4, crs=df.crs,
+    bands = [mean_width, traffic_dir, mean_lanes, orientation, street_type, high_way]
+    band_names = ['street_width', 'street_traffic', 'street_lanes', 'street_orientation', 'street_type', 'high_way']
+    with rasterio.open(savefile, 'w', driver='GTiff', count=len(bands), crs=df.crs,
                        dtype=mean_width.dtype,
                        height=height, width=width,
                        transform=gt) as dst:
@@ -655,8 +670,88 @@ def cooling_tower_tiff(readfile, savefile, resolution):
             dst.set_band_description(i+1, f'{band_names[i]}_res{resolution}')
 
 
+def green_infra_tiff(readfile, savefile, resolution):
+    # Load data
+    df = gpd.read_file(readfile)
+    geometry_col = 'geometry'
+
+    # Create raster bounds
+    scale = resolution / 111320.0 # degrees per pixel for crs=4326
+    width = int(np.round((COORDS[2] - COORDS[0]) / scale) + 1)
+    height = int(np.round((COORDS[3] - COORDS[1]) / scale) + 1)
+    gt = rasterio.transform.from_bounds(COORDS[0], COORDS[1], COORDS[2], COORDS[3], width, height)
+
+    # Create raster
+    green_infra, _ = rasterize(df, geometry_col, 'geometry', ['count'],
+                                            gt, height, width) 
+    
+    # Save raster
+    bands = [green_infra]
+    band_names = ['green_infra']
+    with rasterio.open(savefile, 'w', driver='GTiff', count=len(bands), crs=df.crs,
+                       dtype=green_infra.dtype,
+                       height=height, width=width,
+                       transform=gt) as dst:
+        for i, band in enumerate(bands):
+            dst.write(band, i+1)
+            dst.set_band_description(i+1, f'{band_names[i]}_res{resolution}')
+
+
+def tree_point_tiff(readfile, savefile, resolution):
+    # Load data
+    df = gpd.read_file(readfile)
+    geometry_col = 'geometry'
+
+    # Encode categories
+    encoder = LabelEncoder()
+    df['tpcondition'] = encoder.fit_transform(df['tpcondition'])
+    print(list(encoder.classes_))
+    df['tpstructure'] = encoder.fit_transform(df['tpstructure'])
+    print(list(encoder.classes_))
+
+    # Fill missing values
+    df["stumpdiameter"] = df.groupby(["tpstructure", "genusspecies"])["stumpdiameter"].transform(lambda x: x.median())
+    df["tpcondition"] = df["tpcondition"].fillna('Unknown')
+    df["tpstructure"] = df["tpstructure"].fillna('Unknown')
+
+    # Create raster bounds
+    scale = resolution / 111320.0 # degrees per pixel for crs=4326
+    width = int(np.round((COORDS[2] - COORDS[0]) / scale) + 1)
+    height = int(np.round((COORDS[3] - COORDS[1]) / scale) + 1)
+    gt = rasterio.transform.from_bounds(COORDS[0], COORDS[1], COORDS[2], COORDS[3], width, height)
+
+    # Create raster
+    stump = df.dropna(subset="stumpdiameter")
+    mean_stump, _ = rasterize(stump, geometry_col, 'stumpdiameter', ['mean'],
+                                            gt, height, width)
+    
+    dbh = df.dropna(subset='dbh')
+    mean_dbh, _ = rasterize(dbh, geometry_col, 'dbh', ['mean'],
+                                            gt, height, width)
+    
+    condition, _ = rasterize(df, geometry_col, 'tpcondition', ['mode'],
+                                            gt, height, width)
+    
+    structure, _ = rasterize(df, geometry_col, 'tpstructure', ['mode'],
+                                            gt, height, width)    
+    
+    tree_count, _ = rasterize(df, geometry_col, 'geometry', ['count'],
+                               gt, height, width)
+
+    # Save raster
+    bands = [mean_stump, mean_dbh, condition, structure, tree_count]
+    band_names = ['tree_stump', 'tree_dbh', 'tree_condition', 'tree_structure', 'tree_count']
+    with rasterio.open(savefile, 'w', driver='GTiff', count=len(bands), crs=df.crs,
+                       dtype=mean_stump.dtype,
+                       height=height, width=width,
+                       transform=gt) as dst:
+        for i, band in enumerate(bands):
+            dst.write(band, i+1)
+            dst.set_band_description(i+1, f'{band_names[i]}_res{resolution}')
+
+
 if __name__ == "__main__":
-    # resolution = 30
+    # resolution = 10
     # readfile = READ_DIR + "building.geojson"
     # savefile = SAVE_DIR + f"building_res{resolution}.tiff"
     # building_tiff(readfile, savefile, resolution)
@@ -677,7 +772,21 @@ if __name__ == "__main__":
     # savefile = SAVE_DIR + f"nyzd_res{resolution}.tiff"
     # zoning_nyzd_tiff(readfile, savefile, resolution)
 
+    # resolution = 500
+    # readfile = READ_DIR + "street.geojson"
+    # savefile = SAVE_DIR + f"street_res{resolution}.tiff"
+    # street_tiff(readfile, savefile, resolution)
+
     # resolution = 100
+    # readfile = READ_DIR + "street.geojson"
+    # savefile = SAVE_DIR + f"street_res{resolution}.tiff"
+    # street_tiff(readfile, savefile, resolution)
+
+    # resolution = 30
+    # readfile = READ_DIR + "street.geojson"
+    # savefile = SAVE_DIR + f"street_res{resolution}.tiff"
+    # street_tiff(readfile, savefile, resolution)
+
     # readfile = READ_DIR + "nyzd.geojson"
     # savefile = SAVE_DIR + f"nyzd_res{resolution}.tiff"
     # zoning_nyzd_tiff(readfile, savefile, resolution)
@@ -760,6 +869,11 @@ if __name__ == "__main__":
     # savefile = SAVE_DIR + f"surface_elevation_res{resolution}.tiff"
     # elevation_tiff(readfile, savefile, resolution)
 
+    # resolution = 10
+    # readfile = READ_DIR + "surface_elevation.geojson"
+    # savefile = SAVE_DIR + f"surface_elevation_res{resolution}.tiff"
+    # elevation_tiff(readfile, savefile, resolution)
+
     # resolution = 1000
     # readfile = READ_DIR + "hydrography.geojson"
     # savefile = SAVE_DIR + f"hydrography_res{resolution}.tiff"
@@ -774,6 +888,11 @@ if __name__ == "__main__":
     # readfile = READ_DIR + "hydrography.geojson"
     # savefile = SAVE_DIR + f"hydrography_res{resolution}.tiff"
     # hydro_tiff(readfile, savefile, resolution)
+
+    resolution = 10
+    readfile = READ_DIR + "hydrography.geojson"
+    savefile = SAVE_DIR + f"hydrography_res{resolution}.tiff"
+    hydro_tiff(readfile, savefile, resolution)
 
     # resolution = 1000
     # readfile = READ_DIR + "railroad_structure.geojson"
@@ -795,22 +914,82 @@ if __name__ == "__main__":
     # savefile = SAVE_DIR + f"railroad_structure_res{resolution}.tiff"
     # railroad_structure_tiff(readfile, savefile, resolution)
 
-    resolution = 1000
-    readfile = READ_DIR + "cooling_tower.geojson"
-    savefile = SAVE_DIR + f"cooling_tower_res{resolution}.tiff"
-    cooling_tower_tiff(readfile, savefile, resolution)
+    # resolution = 10
+    # readfile = READ_DIR + "railroad_structure.geojson"
+    # savefile = SAVE_DIR + f"railroad_structure_res{resolution}.tiff"
+    # railroad_structure_tiff(readfile, savefile, resolution)
 
-    resolution = 500
-    readfile = READ_DIR + "cooling_tower.geojson"
-    savefile = SAVE_DIR + f"cooling_tower_res{resolution}.tiff"
-    cooling_tower_tiff(readfile, savefile, resolution)
+    # resolution = 1000
+    # readfile = READ_DIR + "cooling_tower.geojson"
+    # savefile = SAVE_DIR + f"cooling_tower_res{resolution}.tiff"
+    # cooling_tower_tiff(readfile, savefile, resolution)
 
-    resolution = 100
-    readfile = READ_DIR + "cooling_tower.geojson"
-    savefile = SAVE_DIR + f"cooling_tower_res{resolution}.tiff"
-    cooling_tower_tiff(readfile, savefile, resolution)
+    # resolution = 500
+    # readfile = READ_DIR + "cooling_tower.geojson"
+    # savefile = SAVE_DIR + f"cooling_tower_res{resolution}.tiff"
+    # cooling_tower_tiff(readfile, savefile, resolution)
 
-    resolution = 30
-    readfile = READ_DIR + "cooling_tower.geojson"
-    savefile = SAVE_DIR + f"cooling_tower_res{resolution}.tiff"
-    cooling_tower_tiff(readfile, savefile, resolution)
+    # resolution = 100
+    # readfile = READ_DIR + "cooling_tower.geojson"
+    # savefile = SAVE_DIR + f"cooling_tower_res{resolution}.tiff"
+    # cooling_tower_tiff(readfile, savefile, resolution)
+
+    # resolution = 30
+    # readfile = READ_DIR + "cooling_tower.geojson"
+    # savefile = SAVE_DIR + f"cooling_tower_res{resolution}.tiff"
+    # cooling_tower_tiff(readfile, savefile, resolution)
+
+    # resolution = 10
+    # readfile = READ_DIR + "cooling_tower.geojson"
+    # savefile = SAVE_DIR + f"cooling_tower_res{resolution}.tiff"
+    # cooling_tower_tiff(readfile, savefile, resolution)
+
+    # resolution = 1000
+    # readfile = READ_DIR + "green_infrastructure.geojson"
+    # savefile = SAVE_DIR + f"green_infrastructure_res{resolution}.tiff"
+    # green_infra_tiff(readfile, savefile, resolution)
+
+    # resolution = 500
+    # readfile = READ_DIR + "green_infrastructure.geojson"
+    # savefile = SAVE_DIR + f"green_infrastructure_res{resolution}.tiff"
+    # green_infra_tiff(readfile, savefile, resolution)
+
+    # resolution = 100
+    # readfile = READ_DIR + "green_infrastructure.geojson"
+    # savefile = SAVE_DIR + f"green_infrastructure_res{resolution}.tiff"
+    # green_infra_tiff(readfile, savefile, resolution)
+
+    # resolution = 30
+    # readfile = READ_DIR + "green_infrastructure.geojson"
+    # savefile = SAVE_DIR + f"green_infrastructure_res{resolution}.tiff"
+    # green_infra_tiff(readfile, savefile, resolution)
+
+    # resolution = 10
+    # readfile = READ_DIR + "green_infrastructure.geojson"
+    # savefile = SAVE_DIR + f"green_infrastructure_res{resolution}.tiff"
+    # green_infra_tiff(readfile, savefile, resolution)
+
+    # resolution = 1000
+    # readfile = READ_DIR + "tree_points.geojson"
+    # savefile = SAVE_DIR + f"tree_points_res{resolution}.tiff"
+    # tree_point_tiff(readfile, savefile, resolution)
+
+    # resolution = 500
+    # readfile = READ_DIR + "tree_points.geojson"
+    # savefile = SAVE_DIR + f"tree_points_res{resolution}.tiff"
+    # tree_point_tiff(readfile, savefile, resolution)
+
+    # resolution = 100
+    # readfile = READ_DIR + "tree_points.geojson"
+    # savefile = SAVE_DIR + f"tree_points_res{resolution}.tiff"
+    # tree_point_tiff(readfile, savefile, resolution)
+
+    # resolution = 30
+    # readfile = READ_DIR + "tree_points.geojson"
+    # savefile = SAVE_DIR + f"tree_points_res{resolution}.tiff"
+    # tree_point_tiff(readfile, savefile, resolution)
+
+    # resolution = 10
+    # readfile = READ_DIR + "tree_points.geojson"
+    # savefile = SAVE_DIR + f"tree_points_res{resolution}.tiff"
+    # tree_point_tiff(readfile, savefile, resolution)
